@@ -149,6 +149,6 @@ class Primo(object):
 
 if __name__ == '__main__':
     p = Primo()
-    (p.load_scRNAseq_data("./data/test.txt").
+    (p.load_scRNAseq_data("../data/test.txt").
      remove_outlier_cells(2.0).
      normalize())
