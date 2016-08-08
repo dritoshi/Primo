@@ -28,16 +28,31 @@ class Primo(object):
         genes to be analyzed
     cells : list
         cells to be analyzed
+    num_genes : int
+        number of genes to be analyzed
+    num_cells : int
+        number of cells to be analyzed
+    num_genes_variable : int
+        number of variable genes to be analyzed
+    df_rnaseq : DataFrame
+        Gene expression matrix
+    df_rnaseq_variable : DataFrame
+        Gene expression matrix (only variable genes)
 
     Methods
     -------
     load_scRNAseq_data(path_or_dataframe, from_file=True)
-        xxxx
+        xxx
+    remove_gene_toohigh(cutoff)
+        xxx
+    remove_gene_maxlessthan(max_count)
+        xxx
     remove_outlier_cells(val)
         xxx
     normalize(normalize_factor=None)
         xxx
-
+    filter_variable_genes(z_cutoff, max_count=5)
+        xxx
     """
 
     def __init__(self):
@@ -58,8 +73,8 @@ class Primo(object):
         -------
         self : object
             Returns the instance itself
-        """
 
+        """
         if from_file:
             self.df_rnaseq = pd.read_csv(path_or_dataframe,
                                          sep="\t", index_col=0)
@@ -72,9 +87,7 @@ class Primo(object):
         return self
 
     def remove_gene_maxlessthan(self, max_count):
-        """
-        (Deprecated)
-        Remove genes of which expression max is less than `max_count`.
+        """ (Deprecated) Remove genes of which expression max is less than `max_count`.
 
         Parameters
         ----------
@@ -88,7 +101,6 @@ class Primo(object):
             Returns the instance itself
 
         """
-
         ind = self.df_rnaseq.max(axis=1) > max_count
         self.df_rnaseq = self.df_rnaseq.ix[ind, :]
         self._remove_all_zero()
@@ -97,8 +109,7 @@ class Primo(object):
         return self
 
     def remove_gene_toohigh(self, cutoff):
-        """
-        Remove genes of which expression mean is highre than `cutoff`.
+        """Remove genes of which expression mean is highre than `cutoff`.
 
         Parameters
         ----------
@@ -135,7 +146,6 @@ class Primo(object):
             Retunrs the instance itself
 
         """
-
         mean = self.df_rnaseq.sum().mean()
         sd = self.df_rnaseq.sum().std()
         index_not_outlier = abs(self.df_rnaseq.sum() - mean) < (val * sd)
@@ -162,7 +172,6 @@ class Primo(object):
             Returns the instance itself
 
         """
-
         if normalize_factor is None:
             normalize_factor = self.df_rnaseq.sum().mean()
 
@@ -190,8 +199,8 @@ class Primo(object):
         ------
         self : object
             Returns the instance itself
-        """
 
+        """
         ind = self.df_rnaseq.max(axis=1) > max_count
         df_log = np.log(self.df_rnaseq.ix[ind, :] + 0.1)
 
