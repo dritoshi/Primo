@@ -284,12 +284,15 @@ class Primo(object):
         cv2 = (std / mean) ** 2
         cv2_poisson = 1. / mean
 
-        fig, ax = plt.subplots(1, 1, figsize=(4, 4))
-        ax.scatter(mean, cv2, c="lightgray", marker=".", edgecolors="none")
-        ax.scatter(mean, cv2_poisson, c="green", marker=".", edgecolors="none")
+        fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+        ax.scatter(mean, cv2, c="lightgray", marker=".", edgecolors="none",
+                   label="all")
+        ax.scatter(mean, cv2_poisson, c="green", marker=".", edgecolors="none",
+                   label="poisson")
         if colorize_variable_genes:
             ax.scatter(mean[ind], cv2[ind], c="magenta",
-                       marker=".", edgecolors="none")
+                       marker=".", edgecolors="none",
+                       label="variable")
         ax.set_xscale("log")
         ax.set_yscale("log")
         ax.set_xlim(10 ** -2, 10 ** 2.5)
@@ -297,6 +300,8 @@ class Primo(object):
         ax.set_xlabel("Mean")
         ax.set_ylabel("CV ** 2")
 
+        ax.legend(loc="upper right")
+        plt.tight_layout()
         plt.savefig(output_file)
 
         return self
@@ -316,7 +321,6 @@ class Primo(object):
         self.num_cells = len(self.cells)
 
         return self
-
 
 if __name__ == '__main__':
     pass

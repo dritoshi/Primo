@@ -1,3 +1,3 @@
 #!/usr/bin/python
 
-from primo import *
+from .primo import *
