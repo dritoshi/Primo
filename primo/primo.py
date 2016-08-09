@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import os
+from distutils.version import StrictVersion
 # import glob
 
 import pandas as pd
@@ -8,7 +9,7 @@ import numpy as np
 
 # # from scipy.stats import xxx
 
-from sklearn.preprocessing import scale
+# from sklearn.preprocessing import scale
 # from sklearn.manifold import TSNE
 # from sklearn.decomposition import PCA, RandomizedPCA
 # from sklearn.cluster import AggromerativeClustering
@@ -61,13 +62,16 @@ class Primo(object):
         """init documentation"""
         pass
 
-    def load_scRNAseq_data(self, path_or_dataframe, from_file=True):
+    def load_scRNAseq_data(self, path_or_dataframe, num_stamp=None,
+                           from_file=True):
         """Load single cell RNA-seq data.
 
         Parameters
         ----------
         path_or_dataframe : str
             DigitalExpression data
+        num_stamp : int
+            Number of STAMP
         from_file : bool
             If `True` load data from tab-separated text
 
@@ -82,6 +86,15 @@ class Primo(object):
                                          sep="\t", index_col=0)
         else:
             self.df_rnaseq = path_or_dataframe
+
+        if num_stamp is not None:
+            if StrictVersion(pd.__version__) >= "0.17":
+                ind_stamp = (self.df_rnaseq.sum().
+                             sort_values(ascending=False).index)[0:num_stamp]
+            else:
+                ind_stamp = (self.df_rnaseq.sum().
+                             order(ascending=False).index)[0:num_stamp]
+            self.df_rnaseq = self.df_rnaseq.ix[:, ind_stamp]
 
         self._remove_all_zero()
         self._update_info()
@@ -204,7 +217,7 @@ class Primo(object):
 
         """
         ind = self.df_rnaseq.max(axis=1) > max_count
-        df_log = np.log(self.df_rnaseq.ix[ind, :] + 0.1)
+        df_log = np.log10(self.df_rnaseq.ix[ind, :] + 0.1)
 
         bin_label = ["bin" + str(i) for i in range(1, bin_num + 1)]
         df_log['bin'] = pd.qcut(df_log.mean(axis=1), bin_num, labels=bin_label)
@@ -213,13 +226,14 @@ class Primo(object):
         for binname in bin_label:
             df_log_bin = df_log[df_log.bin == binname].ix[
                 :, :df_log.shape[1]-1]
-            dispersion_measure = (df_log_bin.var(axis=1) /
-                                  df_log_bin.mean(axis=1))
+            dispersion_measure = (df_log_bin.std(axis=1) /
+                                  df_log_bin.mean(axis=1)) ** 2
             z_disp = ((dispersion_measure - dispersion_measure.mean()) /
                       dispersion_measure.std())
 
             variable_genes_bin = df_log_bin.index[z_disp > z_cutoff].values
             self.variable_genes.extend(variable_genes_bin)
+            print(binname + ": " + str(len(variable_genes_bin)))
 
         self.df_rnaseq_variable = self.df_rnaseq.ix[self.variable_genes, :]
         self.num_genes_variable = self.df_rnaseq_variable.shape[0]
@@ -293,10 +307,10 @@ if __name__ == '__main__':
     pass
 
     p = Primo()
-    (p.load_scRNAseq_data("../data/St13_1st_dge.txt.gz").
+    (p.load_scRNAseq_data("../data/St13_1st_dge.txt.gz", num_stamp=1200).
      remove_gene_toohigh(500).
      remove_outlier_cells(2.0).
      normalize())
 
-    p.filter_variable_genes(z_cutoff=1.3, max_count=5)
+    p.filter_variable_genes(z_cutoff=1.3, max_count=5, bin_num=20)
     p.plot_cv("../results")
