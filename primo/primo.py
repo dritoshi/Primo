@@ -198,17 +198,22 @@ class Primo(object):
 
         return self
 
-    def filter_variable_genes(self, z_cutoff, max_count=5, bin_num=200):
+    def filter_variable_genes(self, z_cutoff=2, max_count=5, bin_num=200,
+                              stack=False):
         """Filters genes which coefficient of variation are high.
 
         Parameters
         ----------
         z_cutoff : float
             z score for filtering
-
         max_count : float
             Genes of which expression max is less than `max_count` are
             filterd out.
+        bin_num : int
+            number of bin
+        stack : bool
+            If `True`, expression of genes in the bin are stacked before
+            scaling
 
         Return
         ------
@@ -223,17 +228,27 @@ class Primo(object):
         df_log['bin'] = pd.qcut(df_log.mean(axis=1), bin_num, labels=bin_label)
 
         self.variable_genes = []
-        for binname in bin_label:
-            df_log_bin = df_log[df_log.bin == binname].ix[
-                :, :df_log.shape[1]-1]
-            dispersion_measure = (df_log_bin.std(axis=1) /
-                                  df_log_bin.mean(axis=1)) ** 2
-            z_disp = ((dispersion_measure - dispersion_measure.mean()) /
-                      dispersion_measure.std())
 
-            variable_genes_bin = df_log_bin.index[z_disp > z_cutoff].values
-            self.variable_genes.extend(variable_genes_bin)
-            print(binname + ": " + str(len(variable_genes_bin)))
+        if stack is True:
+            for binname in bin_label:
+                df_log_bin = df_log[df_log.bin == binname].ix[
+                    :, :df_log.shape[1]-1]
+                df_stack = df_log_bin.stack()
+                df_z = ((df_stack - df_stack.mean()) /
+                        df_stack.std()).unstack()
+                variable_genes_bin = df_log_bin.index[
+                    df_z.var(axis=1) > z_cutoff].values
+                self.variable_genes.extend(variable_genes_bin)
+        else:
+            for binname in bin_label:
+                df_log_bin = df_log[df_log.bin == binname].ix[
+                    :, :df_log.shape[1]-1]
+                dispersion_measure = (df_log_bin.std(axis=1) /
+                                      df_log_bin.mean(axis=1)) ** 2
+                z_disp = ((dispersion_measure - dispersion_measure.mean()) /
+                          dispersion_measure.std())
+                variable_genes_bin = df_log_bin.index[z_disp > z_cutoff].values
+                self.variable_genes.extend(variable_genes_bin)
 
         self.df_rnaseq_variable = self.df_rnaseq.ix[self.variable_genes, :]
         self.num_genes_variable = self.df_rnaseq_variable.shape[0]
@@ -312,5 +327,6 @@ if __name__ == '__main__':
      remove_outlier_cells(2.0).
      normalize())
 
-    p.filter_variable_genes(z_cutoff=1.3, max_count=5, bin_num=20)
+    p.filter_variable_genes(z_cutoff=1.2, max_count=5,
+                            bin_num=2000, stack=True)
     p.plot_cv("../results")
