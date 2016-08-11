@@ -16,12 +16,12 @@ from sklearn.manifold import TSNE
 
 from scipy.misc import imresize
 
-from skimages import io
-from skimages.color import rgb2gray
-from skimages.util import img_as_ubyte, img_as_bool
-from skimages.morphology import (disk, binary_closing, binary_opening,
-                                 binary_dilation, binary_erosion,
-                                 remove_small_objects)
+from skimage import io
+from skimage.color import rgb2gray
+from skimage.util import img_as_ubyte, img_as_bool
+from skimage.morphology import (disk, binary_closing, binary_opening,
+                                binary_dilation, binary_erosion,
+                                remove_small_objects)
 
 import matplotlib
 matplotlib.use('Agg')
@@ -385,7 +385,9 @@ class Wish(object):
         png_path = os.path.join(images_dir, "*.png")
         self.wish_images_ = io.imread_collection(png_path)
         self.gene_symbol_ = [os.path.splitext(strings)[0].split("/")[-1]
-                             for strings in self.wish_images_]
+                             for strings in self.wish_images_.files]
+
+        return self
 
     def filter_images(self, pixel):
         """filter images
@@ -402,10 +404,62 @@ class Wish(object):
 
         """
 
-        self.wish_images_filtered = [processing_image(im, pixel) for im in
-                                     self.wish_images_]
+        self.wish_images_filtered_ = [processing_image(im, pixel) for im in
+                                      self.wish_images_]
 
         return self
+
+    def plot_wish(self, output_dir):
+        """Plot original and filtered WISH images
+
+        Parameters
+        ----------
+        output_dir : str
+            Image files are exported to output_dir
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
+
+        self.__plot_wish_pattern(self.wish_images_)
+        output_file = os.path.join(output_dir, "wish_original.png")
+        plt.savefig(output_file)
+
+        self.__plot_wish_pattern(self.wish_images_filtered_)
+        output_file = os.path.join(output_dir, "wish_filtered.png")
+        plt.savefig(output_file)
+
+        return self
+
+    def __plot_wish_pattern(self, images):
+        """plot images for WISH patterns
+
+        Parameters
+        ----------
+        images: list
+            list object of images
+        """
+
+        num_genes = len(self.gene_symbol_)
+        ncol = 8
+        nrow = np.int(np.ceil(1.0 * num_genes / ncol))
+
+        fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 2, nrow * 2))
+        axes = axes.flatten()
+
+        for i, gene in enumerate(self.gene_symbol_):
+            axes[i].imshow(images[i], cmap=plt.cm.Purples)
+            axes[i].axis('off')
+            axes[i].set_title(gene, fontsize=20)
+
+        for ax in axes.ravel():
+            if not(len(ax.images)):
+                fig.delaxes(ax)
+
+        plt.tight_layout()
 
 
 def _tsne(X, **kwargs):
@@ -447,7 +501,7 @@ def plot_tsne(X, ax):
     plt.setp(ax.get_yticklabels(), visible=False)
 
 
-def processing_image(image, pixel=40):
+def processing_image(image, pixel):
     """Preprocessing image
 
     Parameters
@@ -478,13 +532,3 @@ def processing_image(image, pixel=40):
 
 if __name__ == '__main__':
     pass
-
-    p = Primo()
-    (p.load_scRNAseq_data("../data/St13_1st_dge.txt.gz", num_stamp=1200).
-     remove_gene_toohigh(500).
-     remove_outlier_cells(2.0).
-     normalize())
-
-    p.filter_variable_genes(z_cutoff=1.2, max_count=5,
-                            bin_num=2000, stack=True)
-    p.plot_cv("../results")

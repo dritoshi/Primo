@@ -21,3 +21,9 @@ if __name__ == '__main__':
      plot_cv(output_dir).
      tsne(plot=True, output_dir=output_dir, init="pca", random_state=12345)
      )
+
+    w = Wish()
+    (w.
+     load_WISH_images("../data/wish").
+     filter_images(pixel=80).
+     plot_wish_pattern(output_dir))
