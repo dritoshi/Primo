@@ -36,19 +36,19 @@ class Primo(object):
 
     Attributes
     ----------
-    genes : list
+    genes_ : list
         genes to be analyzed
-    cells : list
+    cells_ : list
         cells to be analyzed
-    num_genes : int
+    num_genes_ : int
         number of genes to be analyzed
-    num_cells : int
+    num_cells_ : int
         number of cells to be analyzed
-    num_genes_variable : int
+    num_genes_variable_ : int
         number of variable genes to be analyzed
-    df_rnaseq : DataFrame
+    df_rnaseq_ : DataFrame
         Gene expression matrix
-    df_rnaseq_variable : DataFrame
+    df_rnaseq_variable_ : DataFrame
         Gene expression matrix (only variable genes)
     """
 
@@ -76,19 +76,19 @@ class Primo(object):
 
         """
         if from_file:
-            self.df_rnaseq = pd.read_csv(path_or_dataframe,
-                                         sep="\t", index_col=0)
+            self.df_ranseq_ = pd.read_csv(path_or_dataframe,
+                                          sep="\t", index_col=0)
         else:
-            self.df_rnaseq = path_or_dataframe
+            self.df_ranseq_ = path_or_dataframe
 
         if num_stamp is not None:
             if StrictVersion(pd.__version__) >= "0.17":
-                ind_stamp = (self.df_rnaseq.sum().
+                ind_stamp = (self.df_ranseq_.sum().
                              sort_values(ascending=False).index)[0:num_stamp]
             else:
-                ind_stamp = (self.df_rnaseq.sum().
+                ind_stamp = (self.df_ranseq_.sum().
                              order(ascending=False).index)[0:num_stamp]
-            self.df_rnaseq = self.df_rnaseq.ix[:, ind_stamp]
+            self.df_ranseq_ = self.df_ranseq_.ix[:, ind_stamp]
 
         self._remove_all_zero()
         self._update_info()
@@ -110,8 +110,8 @@ class Primo(object):
             Returns the instance itself
 
         """
-        ind = self.df_rnaseq.max(axis=1) > max_count
-        self.df_rnaseq = self.df_rnaseq.ix[ind, :]
+        ind = self.df_ranseq_.max(axis=1) > max_count
+        self.df_ranseq_ = self.df_ranseq_.ix[ind, :]
         self._remove_all_zero()
         self._update_info()
 
@@ -132,8 +132,8 @@ class Primo(object):
             Returns the instance itself
 
         """
-        ind = self.df_rnaseq.mean(axis=1) < cutoff
-        self.df_rnaseq = self.df_rnaseq.ix[ind, :]
+        ind = self.df_ranseq_.mean(axis=1) < cutoff
+        self.df_ranseq_ = self.df_ranseq_.ix[ind, :]
         self._remove_all_zero()
         self._update_info()
 
@@ -155,11 +155,11 @@ class Primo(object):
             Retunrs the instance itself
 
         """
-        mean = self.df_rnaseq.sum().mean()
-        sd = self.df_rnaseq.sum().std()
-        index_not_outlier = abs(self.df_rnaseq.sum() - mean) < (val * sd)
+        mean = self.df_ranseq_.sum().mean()
+        sd = self.df_ranseq_.sum().std()
+        index_not_outlier = abs(self.df_ranseq_.sum() - mean) < (val * sd)
 
-        self.df_rnaseq = self.df_rnaseq.ix[:, index_not_outlier]
+        self.df_ranseq_ = self.df_ranseq_.ix[:, index_not_outlier]
         self._remove_all_zero()
         self._update_info()
 
@@ -182,10 +182,10 @@ class Primo(object):
 
         """
         if normalize_factor is None:
-            normalize_factor = self.df_rnaseq.sum().mean()
+            normalize_factor = self.df_ranseq_.sum().mean()
 
-        self.df_rnaseq = (1.0 * normalize_factor *
-                          self.df_rnaseq / self.df_rnaseq.sum())
+        self.df_ranseq_ = (1.0 * normalize_factor *
+                           self.df_ranseq_ / self.df_ranseq_.sum())
 
         self._remove_all_zero()
         self._update_info()
@@ -215,13 +215,13 @@ class Primo(object):
             Returns the instance itself
 
         """
-        ind = self.df_rnaseq.max(axis=1) > max_count
-        df_log = np.log10(self.df_rnaseq.ix[ind, :] + 0.1)
+        ind = self.df_ranseq_.max(axis=1) > max_count
+        df_log = np.log10(self.df_ranseq_.ix[ind, :] + 0.1)
 
         bin_label = ["bin" + str(i) for i in range(1, bin_num + 1)]
         df_log['bin'] = pd.qcut(df_log.mean(axis=1), bin_num, labels=bin_label)
 
-        self.variable_genes = []
+        self.variable_genes_ = []
 
         if stack is True:
             for binname in bin_label:
@@ -232,7 +232,7 @@ class Primo(object):
                         df_stack.std()).unstack()
                 variable_genes_bin = df_log_bin.index[
                     df_z.var(axis=1) > z_cutoff].values
-                self.variable_genes.extend(variable_genes_bin)
+                self.variable_genes_.extend(variable_genes_bin)
         else:
             for binname in bin_label:
                 df_log_bin = df_log[df_log.bin == binname].ix[
@@ -242,10 +242,10 @@ class Primo(object):
                 z_disp = ((dispersion_measure - dispersion_measure.mean()) /
                           dispersion_measure.std())
                 variable_genes_bin = df_log_bin.index[z_disp > z_cutoff].values
-                self.variable_genes.extend(variable_genes_bin)
+                self.variable_genes_.extend(variable_genes_bin)
 
-        self.df_rnaseq_variable = self.df_rnaseq.ix[self.variable_genes, :]
-        self.num_genes_variable = self.df_rnaseq_variable.shape[0]
+        self.df_rnaseq_variable_ = self.df_ranseq_.ix[self.variable_genes_, :]
+        self.num_genes_variable_ = self.df_rnaseq_variable_.shape[0]
 
         return self
 
@@ -271,10 +271,10 @@ class Primo(object):
         output_file = os.path.join(output_dir, "mean_cv_plot.png")
 
         if colorize_variable_genes is True:
-            ind = self.df_rnaseq.index.isin(self.df_rnaseq_variable.index)
+            ind = self.df_ranseq_.index.isin(self.df_rnaseq_variable_.index)
 
-        mean = self.df_rnaseq.mean(axis=1)
-        std = self.df_rnaseq.std(axis=1)
+        mean = self.df_ranseq_.mean(axis=1)
+        std = self.df_ranseq_.std(axis=1)
         cv2 = (std / mean) ** 2
         cv2_poisson = 1. / mean
 
@@ -318,16 +318,16 @@ class Primo(object):
             Returns the instance itself
 
         """
-        self.tsne_rnaseq_cells = TSNE(**kwargs).fit_transform(
-            1 - self.df_rnaseq_variable.corr())
-        self.tsne_rnaseq_genes = TSNE(**kwargs).fit_transform(
-            1 - self.df_rnaseq_variable.T.corr())
+        self.tsne_rnaseq_cells_ = TSNE(**kwargs).fit_transform(
+            1 - self.df_rnaseq_variable_.corr())
+        self.tsne_rnaseq_genes_ = TSNE(**kwargs).fit_transform(
+            1 - self.df_rnaseq_variable_.T.corr())
 
         if plot is True:
             fig, axes = plt.subplots(1, 2, figsize=(8, 4))
             axes = axes.flatten()
-            plot_tsne(self.tsne_rnaseq_cells, ax=axes[0])
-            plot_tsne(self.tsne_rnaseq_genes, ax=axes[1])
+            plot_tsne(self.tsne_rnaseq_cells_, ax=axes[0])
+            plot_tsne(self.tsne_rnaseq_genes_, ax=axes[1])
             axes[0].set_title("t-SNE: cells")
             axes[1].set_title("t-SNE: genes")
             plt.tight_layout()
@@ -340,18 +340,18 @@ class Primo(object):
         pass
 
     def _remove_all_zero(self):
-        genes_not_all_zero = (self.df_rnaseq.sum(axis=1) != 0)
-        cells_not_all_zero = (self.df_rnaseq.sum(axis=0) != 0)
-        self.df_rnaseq = self.df_rnaseq.ix[genes_not_all_zero,
-                                           cells_not_all_zero]
+        genes_not_all_zero = (self.df_ranseq_.sum(axis=1) != 0)
+        cells_not_all_zero = (self.df_ranseq_.sum(axis=0) != 0)
+        self.df_ranseq_ = self.df_ranseq_.ix[genes_not_all_zero,
+                                             cells_not_all_zero]
 
         return self
 
     def _update_info(self):
-        self.genes = list(self.df_rnaseq.index)
-        self.num_genes = len(self.genes)
-        self.cells = list(self.df_rnaseq.columns)
-        self.num_cells = len(self.cells)
+        self.genes_ = list(self.df_ranseq_.index)
+        self.num_genes_ = len(self.genes_)
+        self.cells_ = list(self.df_ranseq_.columns)
+        self.num_cells_ = len(self.cells_)
 
         return self
 
@@ -424,17 +424,17 @@ class Wish(object):
 
         """
 
-        self.__plot_wish_pattern(self.wish_images_)
+        self._plot_wish_pattern(self.wish_images_)
         output_file = os.path.join(output_dir, "wish_original.png")
         plt.savefig(output_file)
 
-        self.__plot_wish_pattern(self.wish_images_filtered_)
+        self._plot_wish_pattern(self.wish_images_filtered_)
         output_file = os.path.join(output_dir, "wish_filtered.png")
         plt.savefig(output_file)
 
         return self
 
-    def __plot_wish_pattern(self, images):
+    def _plot_wish_pattern(self, images):
         """plot images for WISH patterns
 
         Parameters
