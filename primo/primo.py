@@ -10,9 +10,18 @@ import numpy as np
 # # from scipy.stats import xxx
 
 # from sklearn.preprocessing import scale
-# from sklearn.manifold import TSNE
+from sklearn.manifold import TSNE
 # from sklearn.decomposition import PCA, RandomizedPCA
 # from sklearn.cluster import AggromerativeClustering
+
+from scipy.misc import imresize
+
+from skimages import io
+from skimages.color import rgb2gray
+from skimages.util import img_as_ubyte, img_as_bool
+from skimages.morphology import (disk, binary_closing, binary_opening,
+                                 binary_dilation, binary_erosion,
+                                 remove_small_objects)
 
 import matplotlib
 matplotlib.use('Agg')
@@ -41,21 +50,6 @@ class Primo(object):
         Gene expression matrix
     df_rnaseq_variable : DataFrame
         Gene expression matrix (only variable genes)
-
-    Methods
-    -------
-    load_scRNAseq_data(path_or_dataframe, from_file=True)
-        xxx
-    remove_gene_toohigh(cutoff)
-        xxx
-    remove_gene_maxlessthan(max_count)
-        xxx
-    remove_outlier_cells(val)
-        xxx
-    normalize(normalize_factor=None)
-        xxx
-    filter_variable_genes(z_cutoff, max_count=5)
-        xxx
     """
 
     def __init__(self):
@@ -298,13 +292,52 @@ class Primo(object):
         ax.set_xlim(10 ** -2, 10 ** 2.5)
         ax.set_ylim(10 ** -2, 10 ** 2.5)
         ax.set_xlabel("Mean")
-        ax.set_ylabel("CV ** 2")
+        ax.set_ylabel("Squared coefficient of variation")
 
         ax.legend(loc="upper right")
         plt.tight_layout()
         plt.savefig(output_file)
 
         return self
+
+    def tsne(self, plot=False, output_dir=None, **kwargs):
+        """t-SNE
+
+        Parameters
+        ----------
+        plot : bool
+            if `True`, export PNG file
+        output_dir : :obj:`str`, optional
+            if plot is `True`, export PNG file to this directory
+        **kwargs
+            Arbitary keyword arguments.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself
+
+        """
+        self.tsne_rnaseq_cells = TSNE(**kwargs).fit_transform(
+            1 - self.df_rnaseq_variable.corr())
+        self.tsne_rnaseq_genes = TSNE(**kwargs).fit_transform(
+            1 - self.df_rnaseq_variable.T.corr())
+
+        if plot is True:
+            fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+            axes = axes.flatten()
+            plot_tsne(self.tsne_rnaseq_cells, ax=axes[0])
+            plot_tsne(self.tsne_rnaseq_genes, ax=axes[1])
+            axes[0].set_title("t-SNE: cells")
+            axes[1].set_title("t-SNE: genes")
+            plt.tight_layout()
+            output_file = os.path.join(output_dir, "tsne_rnaseq.png")
+            plt.savefig(output_file)
+
+        return self
+
+    def colorrize_gene(self):
+        pass
 
     def _remove_all_zero(self):
         genes_not_all_zero = (self.df_rnaseq.sum(axis=1) != 0)
@@ -321,6 +354,127 @@ class Primo(object):
         self.num_cells = len(self.cells)
 
         return self
+
+
+class Wish(object):
+    """Container of WISH pattern
+
+    Attributes
+    ----------
+
+    """
+
+    def __init__(self):
+        pass
+
+    def load_WISH_images(self, images_dir):
+        """Load image files of WISH pattern
+
+        Parameters
+        ----------
+        images_dir : str
+            PNG files are included in this directory.
+            the file name should be gene symbol + .png.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
+        png_path = os.path.join(images_dir, "*.png")
+        self.wish_images_ = io.imread_collection(png_path)
+        self.gene_symbol_ = [os.path.splitext(strings)[0].split("/")[-1]
+                             for strings in self.wish_images_]
+
+    def filter_images(self, pixel):
+        """filter images
+
+        Parameters
+        ----------
+        pixel : int
+            Target pixel size for resizing.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
+
+        self.wish_images_filtered = [processing_image(im, pixel) for im in
+                                     self.wish_images_]
+
+        return self
+
+
+def _tsne(X, **kwargs):
+    """t-SNE
+
+    Parameters
+    ----------
+    X : array-like, shape (n_samples, n_features)
+        Gene expression matrix.
+    **kwargs
+        Arbitary keyword arguments.
+
+    Return
+    ------
+    X_new: array-like, shape (n_samples, 2)
+
+    """
+    X_new = TSNE(**kwargs).fit_transform(X)
+    return X_new
+    # Is this really needed?
+
+
+def plot_tsne(X, ax):
+    """Plot the results of t-SNE
+
+    Parameters
+    ----------
+    X : array-like, shape (n_samples, 2)
+        The resulted matrix of t-SNE.
+
+    ax : matplotlib axis
+        xxx
+
+    """
+    ax.scatter(X.T[0], X.T[1], c='lightgray', s=5, edgecolors='None')
+    ax.set_xlabel("Dim 1")
+    ax.set_ylabel("Dim 2")
+    plt.setp(ax.get_xticklabels(), visible=False)
+    plt.setp(ax.get_yticklabels(), visible=False)
+
+
+def processing_image(image, pixel=40):
+    """Preprocessing image
+
+    Parameters
+    ----------
+    image : ndarray
+        Binary input image.
+    pixel : int
+        Target pixel for resizing.
+
+    Return
+    ------
+    image_out : ndarray, shape (pixel, pixel)
+        Output image.
+
+    """
+    im = image
+    im = imresize(im, (pixel, pixel), interp='bilinear')
+    im = (rgb2gray(im) < 0.5)
+    im = remove_small_objects(im, pixel / 6.)
+    im = (binary_erosion(im, disk(pixel / 16.)) * 0.25 +
+          im * 0.5 +
+          binary_dilation(im, disk(pixel / 16.)) * 0.25)
+    im = im * disk((pixel - 1) * 0.5)
+    image_out = im
+
+    return image_out
+
 
 if __name__ == '__main__':
     pass
