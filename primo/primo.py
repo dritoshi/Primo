@@ -462,6 +462,54 @@ class Wish(object):
         plt.tight_layout()
 
 
+class Position(object):
+    """Class for position information
+
+    Attributes
+    ----------
+
+    """
+
+    def __init__(self):
+        pass
+
+    def load_inputs(self, r_obj, w_obj):
+        """ Loads RNA-seq object and WISH object.
+
+        Parameters
+        ----------
+        r_obj : obj: `RNAseq class object`
+            Instance of RNA-seq class
+
+        w_obj : obj: `Wish class object`
+            Instance of Wishclass
+
+        Return
+        ------
+        self : obj
+            Returns the instance itself.
+
+        """
+        self.r_obj_ = r_obj
+        self.w_obj_ = w_obj
+
+    def calc_position(self):
+        """ Calculates position of cells.
+
+        Parameters
+        ----------
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
+        self.gene_symbol_ = list(set(self.r_obj) & set(self.w_obj))
+
+        # writing
+
+
 def _tsne(X, **kwargs):
     """t-SNE
 
