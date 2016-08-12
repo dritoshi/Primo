@@ -6,24 +6,26 @@ sys.path.append("../")
 
 if __name__ == '__main__':
 
-    from primo import Primo
+    from primo import RNAseq, Wish, Position
 
     output_dir = "../results"
 
-    p = Primo()
-    (p.load_scRNAseq_data("../data/St13_1st_dge.txt.gz",
-                          num_stamp=1200).
-     remove_gene_toohigh(500).
-     remove_outlier_cells(2.0).
-     normalize().
-     filter_variable_genes(z_cutoff=1.1, max_count=3,
-                           bin_num=2000, stack=True).
-     plot_cv(output_dir).
-     tsne(plot=True, output_dir=output_dir, init="pca", random_state=12345)
-     )
+    r = (RNAseq().load_scRNAseq_data("../data/St13_1st_dge.txt.gz",
+                                     num_stamp=1200).
+         remove_gene_toohigh(500).
+         remove_outlier_cells(2.0).
+         normalize().
+         filter_variable_genes(z_cutoff=1.1, max_count=3,
+                               bin_num=2000, stack=True).
+         plot_cv(output_dir).
+         tsne(plot=True, output_dir=output_dir, init="pca", random_state=12345)
+         )
 
-    w = Wish()
-    (w.
-     load_WISH_images("../data/wish").
-     filter_images(pixel=80).
-     plot_wish_pattern(output_dir))
+    w = (Wish().
+         load_WISH_images("../data/wish").
+         filter_images(pixel=80).
+         plot_wish(output_dir))
+
+    p = (Position().
+         load_inputs(r, w).
+         calc_position())
