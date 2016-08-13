@@ -7,6 +7,7 @@ if __name__ == '__main__':
     from primo.rnaseq import RNAseq
     from primo.wish import Wish
     from primo.position import Position
+    from primo.spatial_expression import SpatialExpression
 
     output_dir = "../results"
 
@@ -35,4 +36,9 @@ if __name__ == '__main__':
          load_inputs(r, w).
          calc_position().
          plot_position(output_dir, num_cells=240)
+         )
+
+    s = (SpatialExpression().
+         load_inputs(r, p).
+         predict()
          )

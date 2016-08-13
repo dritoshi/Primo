@@ -43,11 +43,11 @@ class Position(object):
 
         Parameters
         ----------
-        r_obj : obj: `RNAseq class object`
+        r_obj : :obj:`RNAseq`
             Instance of RNA-seq class
 
-        w_obj : obj: `Wish class object`
-            Instance of Wishclass
+        w_obj : :obj:`Wish`
+            Instance of Wish class
 
         Return
         ------
@@ -122,7 +122,7 @@ class Position(object):
         ----------
         output_dir : str
             The png file is exported to this directory.
-        num_cells : obj:‘`int`, optional
+        num_cells : :obj:`int`, optional
             Number of cells to be shown in exported png file.
             If `None`, all cells will be shown.
 
