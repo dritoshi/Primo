@@ -1,0 +1,213 @@
+from __future__ import print_function
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+import os
+
+import pandas as pd
+import numpy as np
+
+from scipy.misc import imresize
+
+from skimage import io
+from skimage.color import rgb2gray
+from skimage.morphology import (disk, binary_dilation, binary_erosion,
+                                remove_small_objects)
+
+__all__ = ['Wish', 'processing_image']
+
+
+class Wish(object):
+    """Container of WISH pattern
+
+    Attributes
+    ----------
+    wish_images_ : skimage image collection
+        This contains original WISH images.
+    genes_ : list
+        List of genes of which WISH patterns are imported.
+    annotation_type_ : str
+        Annotation type of genes. Examples: symbol or uid.
+    genes_symbol_ : list
+        Gene symbol of genes.
+    genes_uid_ : list
+        Unigene ID of genes.
+    pixel : int
+        The length of one side of filtered images.
+    wish_images_filtered_ : list of ndarray
+        List of images after filtered.
+    wish_matrix_ : pandas DataFrame
+        Wish matrix.
+    """
+
+    def __init__(self):
+        pass
+
+    def load_WISH_images(self, images_dir, annotation_type="symbol"):
+        """Load image files of WISH pattern
+
+        Parameters
+        ----------
+        images_dir : str
+            PNG files are included in this directory.
+            the file name should be gene symbol + .png.
+
+        annotation_type : str
+            Type of gene annotation.
+            Examples: symbol, uid (Unigene ID)
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
+        png_path = os.path.join(images_dir, "*.png")
+        self.wish_images_ = io.imread_collection(png_path)
+        self.genes_ = [os.path.splitext(strings)[0].split("/")[-1]
+                       for strings in self.wish_images_.files]
+
+        self.annotation_type_ = annotation_type
+
+        return self
+
+    def symbol_to_uid(self, conversion_table_file):
+        """Convert annotation type of gene from symbol to uid
+
+        Parameters
+        ----------
+        conversion_table_file : str
+            File path of conversion table, tab-separated text.
+            Header should be 'symbol\tuid'
+
+        Return
+        ------
+        self : object
+            Returns the instance itself
+
+        """
+
+        df = pd.read_csv(conversion_table_file, sep="\t",
+                         names=('uid', 'symbol'))
+
+        self.genes_symbol_ = self.genes_
+        self.genes_uid_ = [df[df.symbol == x].uid.values[0]
+                           for x in self.genes_symbol_]
+        self.genes_ = self.genes_uid_
+        self.annotation_type_ = "uid"
+
+        return self
+
+    def filter_images(self, pixel):
+        """filter images
+
+        Parameters
+        ----------
+        pixel : int
+            Target pixel size for resizing.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
+        self.pixel = pixel
+
+        self.wish_images_filtered_ = [processing_image(im, self.pixel)
+                                      for im in self.wish_images_]
+
+        w_list = [x.flatten() for x in self.wish_images_filtered_]
+        w_index = self.genes_
+        w_column = ['pix' + str(i) for i in range(1, self.pixel ** 2 + 1)]
+        self.wish_matrix_ = pd.DataFrame(w_list,
+                                         index=w_index, columns=w_column)
+
+        return self
+
+    def plot_wish(self, output_dir):
+        """Plot original and filtered WISH images
+
+        Parameters
+        ----------
+        output_dir : str
+            Image files are exported to output_dir
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
+
+        self._plot_wish_pattern(self.wish_images_)
+        output_file = os.path.join(output_dir, "wish_original.png")
+        plt.savefig(output_file)
+
+        self._plot_wish_pattern(self.wish_images_filtered_)
+        output_file = os.path.join(output_dir, "wish_filtered.png")
+        plt.savefig(output_file)
+
+        return self
+
+    def _plot_wish_pattern(self, images):
+        """plot images for WISH patterns
+
+        Parameters
+        ----------
+        images: list
+            list object of images
+        """
+
+        num_genes = len(self.genes_)
+        ncol = 8
+        nrow = np.int(np.ceil(1.0 * num_genes / ncol))
+
+        fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 2, nrow * 2))
+        axes = axes.flatten()
+
+        for i, gene in enumerate(self.genes_):
+            axes[i].imshow(images[i], cmap=plt.cm.Purples)
+            axes[i].axis('off')
+            axes[i].set_title(gene, fontsize=20)
+
+        for ax in axes.ravel():
+            if not(len(ax.images)):
+                fig.delaxes(ax)
+
+        plt.tight_layout()
+
+
+def processing_image(image, pixel):
+    """Preprocessing image
+
+    Parameters
+    ----------
+    image : ndarray
+        Binary input image.
+    pixel : int
+        Target pixel for resizing.
+
+    Return
+    ------
+    image_out : ndarray, shape (pixel, pixel)
+        Output image.
+
+    """
+    im = image
+    im = imresize(im, (pixel, pixel), interp='bilinear')
+    im = (rgb2gray(im) < 0.5)
+    im = remove_small_objects(im, pixel / 6.)
+    im = (binary_erosion(im, disk(pixel / 16.)) * 0.25 +
+          im * 0.5 +
+          binary_dilation(im, disk(pixel / 16.)) * 0.25)
+    im = im * disk((pixel - 1) * 0.5)
+    image_out = im
+
+    return image_out
+
+
+if __name__ == '__main__':
+    pass

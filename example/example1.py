@@ -1,12 +1,12 @@
-#!/usr/bin/python3
-
 import sys
 
-sys.path.append("../")
+sys.path.append("..")
 
 if __name__ == '__main__':
 
-    from primo import RNAseq, Wish, Position
+    from primo.rnaseq import RNAseq
+    from primo.wish import Wish
+    from primo.position import Position
 
     output_dir = "../results"
 
@@ -34,5 +34,5 @@ if __name__ == '__main__':
     p = (Position().
          load_inputs(r, w).
          calc_position().
-         plot_position(output_dir, num_cells=100)
+         plot_position(output_dir, num_cells=240)
          )
