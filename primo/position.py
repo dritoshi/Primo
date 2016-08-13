@@ -28,6 +28,10 @@ class Position(object):
         Inferred cell position
     position_images_ : list of ndarray
         list of inferred cell position
+    mean_position_ : ndarray, shape (w_obj_.pixel_ ** 2, )
+        Mean of inferred cell position.
+    mean_position_image_ : ndarray, shape (w_obj_.pixel_, w_obj_.pixel_)
+        Image of mean inferred cell position.
 
     """
 
@@ -77,12 +81,17 @@ class Position(object):
 
         # writing
         r_mat = self.r_obj_.df_rnaseq_.ix[self.genes_, :]
-        r_mat_norm = np.sqrt(np.square(r_mat).sum(axis=1))
-        r_mat = (r_mat.T / r_mat_norm).T.fillna(0)
+
+        # scaling-like operation for genes
+        # to weaken high expression gene
+        r_mat = (r_mat.T / r_mat.sum(axis=1)).T
+
+        r_mat_norm = np.sqrt(np.square(r_mat).sum(axis=0))
+        r_mat = (r_mat / r_mat_norm).fillna(0)
 
         w_mat = self.w_obj_.wish_matrix_.ix[self.genes_, :]
-        w_mat_norm = np.sqrt(np.square(w_mat).sum(axis=1))
-        w_mat = (w_mat.T / w_mat_norm).T.fillna(0)
+        w_mat_norm = np.sqrt(np.square(w_mat).sum(axis=0))
+        w_mat = (w_mat / w_mat_norm).fillna(0)
 
         cosine_similarity = np.dot(r_mat.T, w_mat)
 
@@ -97,12 +106,12 @@ class Position(object):
         self.num_pixels_ = self.position_.shape[1]
 
         self.position_images_ = [np.array(self.position_.ix[i]).reshape(
-            self.w_obj_.pixel, self.w_obj_.pixel)
+            self.w_obj_.pixel_, self.w_obj_.pixel_)
                                 for i in range(self.num_cells_)]
 
         self.mean_position_ = self.position_.mean()
         self.mean_position_image_ = self.mean_position_.reshape(
-            self.w_obj_.pixel, self.w_obj_.pixel)
+            self.w_obj_.pixel_, self.w_obj_.pixel_)
 
         return self
 

@@ -34,7 +34,7 @@ class Wish(object):
         Gene symbol of genes.
     genes_uid_ : list
         Unigene ID of genes.
-    pixel : int
+    pixel_ : int
         The length of one side of filtered images.
     wish_images_filtered_ : list of ndarray
         List of images after filtered.
@@ -114,14 +114,14 @@ class Wish(object):
             Returns the instance itself.
 
         """
-        self.pixel = pixel
+        self.pixel_ = pixel
 
-        self.wish_images_filtered_ = [processing_image(im, self.pixel)
+        self.wish_images_filtered_ = [processing_image(im, self.pixel_)
                                       for im in self.wish_images_]
 
         w_list = [x.flatten() for x in self.wish_images_filtered_]
         w_index = self.genes_
-        w_column = ['pix' + str(i) for i in range(1, self.pixel ** 2 + 1)]
+        w_column = ['pix' + str(i) for i in range(1, self.pixel_ ** 2 + 1)]
         self.wish_matrix_ = pd.DataFrame(w_list,
                                          index=w_index, columns=w_column)
 
