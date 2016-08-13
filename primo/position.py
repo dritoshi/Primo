@@ -100,6 +100,10 @@ class Position(object):
             self.w_obj_.pixel, self.w_obj_.pixel)
                                 for i in range(self.num_cells_)]
 
+        self.mean_position_ = self.position_.mean()
+        self.mean_position_image_ = self.mean_position_.reshape(
+            self.w_obj_.pixel, self.w_obj_.pixel)
+
         return self
 
     def plot_position(self, output_dir, num_cells=None):
@@ -140,8 +144,35 @@ class Position(object):
             if not(len(ax.images)):
                 fig.delaxes(ax)
 
-        plt.savefig(output_file)
         plt.tight_layout()
+        plt.savefig(output_file)
+
+        self._plot_mean_position(output_dir)
+
+        return self
+
+    def _plot_mean_position(self, output_dir):
+        """Plot mean of inferred cell position
+
+        Parameters
+        ----------
+        output_dir : str
+            The png file is exported to this directory.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
+
+        output_file = os.path.join(output_dir, "cell_position_mean.png")
+        fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+        ax.imshow(self.mean_position_image_)
+        ax.axis('off')
+        ax.set_title("Mean of cell position probability", fontsize=24)
+        plt.tight_layout()
+        plt.savefig(output_file)
 
         return self
 
