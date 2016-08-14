@@ -89,8 +89,53 @@ class Position(object):
 
         return self
 
-    def _calc_position(self, genes):
+    def calc_position_loocv(self):
+        """Calculates position matrix for LOOCV
 
+        LOOCV: Leave-one-out cross-validation
+        The self.loocv and self.loocv_mean can be used for
+        further calculation in primo.spatial_pattern
+
+        Parameters
+        ----------
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
+
+        self.loocv = []
+        self.loocv_mean = []
+
+        for i, gene in enumerate(self.genes_):
+            genes_exclude = [x for x in self.genes_ if x != gene]
+
+            position, _ = self._calc_position(genes_exclude)
+            mean_position, _ = self._mean_position(position)
+
+            self.loocv.append(position)
+            self.loocv_mean.append(mean_position)
+
+        return self
+
+    def _calc_position(self, genes):
+        """Calculates position matrix
+
+        Parameters
+        ----------
+        genes : :obj:`list`
+            list of genes
+
+        Return
+        ------
+        position : :obj:`Dataframe`
+            position matrix
+        position_images : :obj:`list` of :obj:`ndarra`
+            list of position matrix
+
+        """
         r_mat = self.r_obj_.df_rnaseq_.ix[genes, :]
 
         # scaling-like operation for genes
@@ -120,6 +165,19 @@ class Position(object):
         return (position, position_images)
 
     def _mean_position(self, position):
+        """Calculates meand of position matrix
+
+        Parameters
+        ----------
+        position : :obj:`Dataframe`
+            Position matrix, shape (n_pixel, )
+
+        Return
+        ------
+        mean_position : :obj:`Series`
+        mean_position_image : :obj:`list` of :obj:`ndarray`
+
+        """
         mean_position = position.mean()
         mean_position_image = mean_position.reshape(
             self.w_obj_.pixel_, self.w_obj_.pixel_)

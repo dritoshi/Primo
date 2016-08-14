@@ -35,7 +35,7 @@ if __name__ == '__main__':
     p = (Position().
          load_inputs(r, w).
          infer_position().
-         plot_position(output_dir, num_cells=240)
+         plot_position(output_dir, num_cells=40)
          )
 
     s = (SpatialExpression().
@@ -47,6 +47,10 @@ if __name__ == '__main__':
     # s.plot_spatial_variable(output_dir, is_uid=True,
     #                                 conversion_table_file="../data/uid_symbol.tsv")
 
+    # Image show of interest genes
     gene_list = ['Xl.1685', 'Xl.16508', 'Xl.1588']
     s.plot_spatial_interest(output_dir, gene_list=gene_list, is_uid=True,
                             conversion_table_file="../data/uid_symbol.tsv")
+
+    # LOOCV
+    p.calc_position_loocv()
