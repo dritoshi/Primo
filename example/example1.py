@@ -42,3 +42,11 @@ if __name__ == '__main__':
          load_inputs(r, p).
          predict()
          )
+
+    # It takes long time. Do not run
+    # s.plot_spatial_variable(output_dir, is_uid=True,
+    #                                 conversion_table_file="../data/uid_symbol.tsv")
+
+    gene_list = ['Xl.1685', 'Xl.16508', 'Xl.1588']
+    s.plot_spatial_interest(output_dir, gene_list=gene_list, is_uid=True,
+                            conversion_table_file="../data/uid_symbol.tsv")
