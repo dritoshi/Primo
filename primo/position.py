@@ -58,13 +58,15 @@ class Position(object):
         self.r_obj_ = r_obj
         self.w_obj_ = w_obj
 
+        self.num_cells_ = self.r_obj_.num_cells_
+
         if self.r_obj_.annotation_type_ is not self.w_obj_.annotation_type_:
             print("Annotation types of genes are different in two matrix.")
             raise ValueError
 
         return self
 
-    def calc_position(self):
+    def infer_position(self):
         """ Calculates position of cells.
 
         Parameters
@@ -79,8 +81,17 @@ class Position(object):
         self.genes_ = list(set(self.r_obj_.genes_) &
                            set(self.w_obj_.genes_))
 
-        # writing
-        r_mat = self.r_obj_.df_rnaseq_.ix[self.genes_, :]
+        self.position_, self.position_images_ = (
+            self._calc_position(self.genes_))
+
+        self.mean_position_, self.mean_position_image_ = (
+            self._mean_position(self.position_))
+
+        return self
+
+    def _calc_position(self, genes):
+
+        r_mat = self.r_obj_.df_rnaseq_.ix[genes, :]
 
         # scaling-like operation for genes
         # to weaken high expression gene
@@ -89,7 +100,7 @@ class Position(object):
         r_mat_norm = np.sqrt(np.square(r_mat).sum(axis=0))
         r_mat = (r_mat / r_mat_norm).fillna(0)
 
-        w_mat = self.w_obj_.wish_matrix_.ix[self.genes_, :]
+        w_mat = self.w_obj_.wish_matrix_.ix[genes, :]
         w_mat_norm = np.sqrt(np.square(w_mat).sum(axis=0))
         w_mat = (w_mat / w_mat_norm).fillna(0)
 
@@ -98,22 +109,22 @@ class Position(object):
         cosine_similarity_norm = (cosine_similarity.T /
                                   cosine_similarity.sum(axis=1)).T
 
-        self.position_ = pd.DataFrame(cosine_similarity_norm,
-                                      index=self.r_obj_.cells_,
-                                      columns=self.w_obj_.wish_matrix_.columns)
+        position = pd.DataFrame(cosine_similarity_norm,
+                                index=self.r_obj_.cells_,
+                                columns=self.w_obj_.wish_matrix_.columns)
 
-        self.num_cells_ = self.position_.shape[0]
-        self.num_pixels_ = self.position_.shape[1]
-
-        self.position_images_ = [np.array(self.position_.ix[i]).reshape(
+        position_images = [np.array(position.ix[i]).reshape(
             self.w_obj_.pixel_, self.w_obj_.pixel_)
-                                for i in range(self.num_cells_)]
+                                for i in range(position.shape[0])]
 
-        self.mean_position_ = self.position_.mean()
-        self.mean_position_image_ = self.mean_position_.reshape(
+        return (position, position_images)
+
+    def _mean_position(self, position):
+        mean_position = position.mean()
+        mean_position_image = mean_position.reshape(
             self.w_obj_.pixel_, self.w_obj_.pixel_)
 
-        return self
+        return (mean_position, mean_position_image)
 
     def plot_position(self, output_dir, num_cells=None):
         """Plot inferred cell position

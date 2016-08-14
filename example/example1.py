@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     p = (Position().
          load_inputs(r, w).
-         calc_position().
+         infer_position().
          plot_position(output_dir, num_cells=240)
          )
 
