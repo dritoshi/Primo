@@ -12,8 +12,9 @@ import numpy as np
 
 from sklearn.manifold import TSNE
 
+from .utils import plot_tsne
 
-__all__ = ['RNAseq', 'plot_tsne']
+__all__ = ['RNAseq', ]
 
 
 class RNAseq(object):
@@ -346,26 +347,3 @@ class RNAseq(object):
         self.num_cells_ = len(self.cells_)
 
         return self
-
-
-def plot_tsne(X, ax):
-    """Plot the results of t-SNE
-
-    Parameters
-    ----------
-    X : array-like, shape (n_samples, 2)
-        The resulted matrix of t-SNE.
-
-    ax : matplotlib axis
-        xxx
-
-    """
-    ax.scatter(X.T[0], X.T[1], c='lightgray', s=5, edgecolors='None')
-    ax.set_xlabel("Dim 1")
-    ax.set_ylabel("Dim 2")
-    plt.setp(ax.get_xticklabels(), visible=False)
-    plt.setp(ax.get_yticklabels(), visible=False)
-
-
-if __name__ == '__main__':
-    pass
