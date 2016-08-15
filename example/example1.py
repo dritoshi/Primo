@@ -54,3 +54,4 @@ if __name__ == '__main__':
 
     # LOOCV
     p.calc_position_loocv()
+    s.predict_loocv()

@@ -149,6 +149,37 @@ class SpatialExpression(object):
 
         return self
 
+    def predict_loocv(self):
+        """Predicts spatial expression pattern for genes using LOOCV
+
+        Parameters
+        ----------
+
+        Return
+        ------
+        self : object
+            Returns the instance it self
+
+        """
+
+        genes = self.p_obj_.genes_
+        self.spatial_loocv_ = []
+        self.spatial_loocv_images_ = []
+
+        for i, gene in enumerate(genes):
+            X = self.r_obj_.df_rnaseq_.ix[gene, :]
+            Y = self.p_obj_.position_loocv_[i]
+            Y_mean = self.p_obj_.position_loocv_mean_[i]
+
+            spatial = np.dot(X, Y) / np.array(Y_mean)
+            spatial = np.nan_to_num(spatial)
+            spatial_image = spatial.reshape(self.pixel_, self.pixel_)
+
+            self.spatial_loocv_.append(spatial)
+            self.spatial_loocv_images_.append(spatial_image)
+
+        return self
+
     def _plot_image(self, output_file, gene_list,
                     is_uid=False, conversion_table_file=None):
 
