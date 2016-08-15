@@ -9,10 +9,10 @@ if __name__ == '__main__':
     from primo.position import Position
     from primo.spatial_expression import SpatialExpression
 
-    output_dir = "../results"
+    output_dir = "./results"
 
     r = (RNAseq().
-         load_scRNAseq_data("../data/St13_1st_dge.txt.gz",
+         load_scRNAseq_data("./data/St13_1st_dge.txt.gz",
                             num_stamp=1200,
                             annotation_type="uid").
          remove_gene_toohigh(500).
@@ -25,9 +25,9 @@ if __name__ == '__main__':
          )
 
     w = (Wish().
-         load_WISH_images("../data/wish",
+         load_WISH_images("./data/wish",
                           annotation_type="symbol").
-         symbol_to_uid("../data/uid_symbol.tsv").
+         symbol_to_uid("./data/uid_symbol.tsv").
          filter_images(pixel=80).
          plot_wish(output_dir)
          )
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     # Image show of interest genes
     gene_list = ['Xl.1685', 'Xl.16508', 'Xl.1588']
     s.plot_spatial_interest(output_dir, gene_list=gene_list, is_uid=True,
-                            conversion_table_file="../data/uid_symbol.tsv")
+                            conversion_table_file="./data/uid_symbol.tsv")
 
     # LOOCV
     p.calc_position_loocv()
