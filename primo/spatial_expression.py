@@ -11,6 +11,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from sklearn.manifold import TSNE
+
+from primo.utils import plot_tsne
+
 __all__ = ['SpatialExpression', ]
 
 
@@ -234,6 +238,43 @@ class SpatialExpression(object):
 
         plt.tight_layout()
         plt.savefig(output_file)
+
+        return self
+
+    def tsne(self, plot=False, output_dir=None, **kwargs):
+        """t-SNE
+
+        Parameters
+        ----------
+        plot : bool
+            If `True`, export PNG file.
+        output_dir : str
+            If plot is `True`, export PNG file to this directory.
+        **kwargs
+            Arbitary keyword arguments.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself
+
+        """
+        df = self.spatial_.ix[self.r_obj_.variable_genes_,
+                              self.w_obj_.pixel_name_embryo_]
+
+        self.tsne_spatial_pixels = TSNE(**kwargs).fit_transform(1 - df.corr())
+        self.tsne_spatial_genes = TSNE(**kwargs).fit_transform(1 - df.T.corr())
+
+        if plot is True:
+            fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+            axes = axes.flatten()
+            plot_tsne(self.tsne_spatial_pixels, ax=axes[0])
+            plot_tsne(self.tsne_spatial_genes, ax=axes[1])
+            axes[0].set_title("Spatial gene expression\n(t-SNE: pixels)")
+            axes[1].set_title("Spatial gene expression\n(t-SNE: genes)")
+            plt.tight_layout()
+            output_file = os.path.join(output_dir, "tsne_spatial.png")
+            plt.savefig(output_file)
 
         return self
 

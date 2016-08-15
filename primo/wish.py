@@ -40,6 +40,12 @@ class Wish(object):
         List of images after filtered.
     wish_matrix_ : pandas DataFrame
         Wish matrix.
+    pixel_name_all_ : list
+        list of pixel name for all pixels
+    pixel_name_embryo_ : list
+        list of pixel name for pixels located in embryo
+    pixel_name_outer_ : list
+        list of pixel name for pixels locates outer embryo
     """
 
     def __init__(self):
@@ -124,6 +130,13 @@ class Wish(object):
         w_column = ['pix' + str(i) for i in range(1, self.pixel_ ** 2 + 1)]
         self.wish_matrix_ = pd.DataFrame(w_list,
                                          index=w_index, columns=w_column)
+
+        disk_matrix = disk((self.pixel_ - 1) * 0.5)
+        self.pixel_name_all_ = np.array(w_column)
+        self.pixel_name_embryo_ = np.array(w_column)[
+            disk_matrix.flatten() == 1]
+        self.pixel_name_outer_ = np.array(w_column)[
+            disk_matrix.flatten() == 0]
 
         return self
 

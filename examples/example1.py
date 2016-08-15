@@ -40,7 +40,8 @@ if __name__ == '__main__':
 
     s = (SpatialExpression().
          load_inputs(r, w, p).
-         predict()
+         predict().
+         tsne(plot=True, output_dir=output_dir, init="pca", random_state=12345)
          )
 
     # It takes long time. Do not run
