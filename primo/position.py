@@ -32,7 +32,10 @@ class Position(object):
         Mean of inferred cell position.
     mean_position_image_ : ndarray, shape (w_obj_.pixel_, w_obj_.pixel_)
         Image of mean inferred cell position.
-
+    position_loocv_ : list
+        List of position matrix for LOOCV
+    position_loocv_mean_ : list
+        List of mean of position matrix for LOOCV
     """
 
     def __init__(self):
@@ -93,8 +96,8 @@ class Position(object):
         """Calculates position matrix for LOOCV
 
         LOOCV: Leave-one-out cross-validation
-        The self.loocv and self.loocv_mean can be used for
-        further calculation in primo.spatial_pattern
+        The self.position_loocv_ and self.position_loocv_mean
+        can be used for further calculation in primo.spatial_pattern
 
         Parameters
         ----------
@@ -106,8 +109,8 @@ class Position(object):
 
         """
 
-        self.loocv = []
-        self.loocv_mean = []
+        self.position_loocv_ = []
+        self.position_loocv_mean_ = []
 
         for i, gene in enumerate(self.genes_):
             genes_exclude = [x for x in self.genes_ if x != gene]
@@ -115,8 +118,8 @@ class Position(object):
             position, _ = self._calc_position(genes_exclude)
             mean_position, _ = self._mean_position(position)
 
-            self.loocv.append(position)
-            self.loocv_mean.append(mean_position)
+            self.position_loocv_.append(position)
+            self.position_loocv_mean_.append(mean_position)
 
         return self
 
@@ -253,7 +256,3 @@ class Position(object):
         plt.savefig(output_file)
 
         return self
-
-
-if __name__ == '__main__':
-    pass
