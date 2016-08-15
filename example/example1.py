@@ -39,7 +39,7 @@ if __name__ == '__main__':
          )
 
     s = (SpatialExpression().
-         load_inputs(r, p).
+         load_inputs(r, w, p).
          predict()
          )
 
@@ -54,4 +54,4 @@ if __name__ == '__main__':
 
     # LOOCV
     p.calc_position_loocv()
-    s.predict_loocv()
+    s.predict_loocv().plot_loocv(output_dir)

@@ -21,6 +21,8 @@ class SpatialExpression(object):
     ----------
     r_obj_ : :obj:`RNAseq`
         Instance of `RNAseq` class instance from primo.rnaseq.
+    w_obj_ : :obj:`Wish`
+        Instance of `Wish` class instance from primo.position.
     p_obj_ : :obj:`Position`
         Instance of `Position` class instance from primo.position.
     genes_ : list
@@ -39,13 +41,15 @@ class SpatialExpression(object):
     def __init__(self):
         pass
 
-    def load_inputs(self, r_obj, p_obj):
+    def load_inputs(self, r_obj, w_obj, p_obj):
         """Load input objects
 
         Parameters
         ----------
         r_obj : :obj:`RNAseq`.
             primo RNAseq class instance.
+        w_obj : :obj:`Wish`.
+            primo Wish class instance.
         p_obj : :obj:`Position`.
             primo Position class instance.
 
@@ -56,6 +60,7 @@ class SpatialExpression(object):
 
         """
         self.r_obj_ = r_obj
+        self.w_obj_ = w_obj
         self.p_obj_ = p_obj
 
         return self
@@ -177,6 +182,58 @@ class SpatialExpression(object):
 
             self.spatial_loocv_.append(spatial)
             self.spatial_loocv_images_.append(spatial_image)
+
+        return self
+
+    def plot_loocv(self, output_dir):
+        """Plots the results of LOOCV
+
+        Parameters
+        ----------
+        output_dir : str
+            The png file is saved in this directory.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself
+
+        """
+        output_file = os.path.join(output_dir, "images_loocv.png")
+
+        genes = self.p_obj_.genes_
+
+        ncol = 6
+        nrow = np.int(np.ceil(3.0 * len(genes) / ncol))
+        fig, axes = plt.subplots(nrow, ncol,
+                                 figsize=(ncol * 2, nrow * 2))
+        axes = axes.flatten()
+
+        for i, gene in enumerate(genes):
+            im1 = self.w_obj_.wish_images_filtered_[
+                self.w_obj_.genes_.index(gene)]
+            im2 = self.spatial_images_[
+                self.genes_.index(gene)]
+            im3 = self.spatial_loocv_images_[i]
+
+            axes[i * 3 + 0].imshow(im1, cmap=plt.cm.Purples)
+            axes[i * 3 + 0].set_title(gene + " : original", fontsize=10)
+
+            axes[i * 3 + 1].imshow(im2, cmap=plt.cm.jet)
+            axes[i * 3 + 1].set_title(gene + " : inference", fontsize=10)
+
+            axes[i * 3 + 2].imshow(im3, cmap=plt.cm.jet)
+            axes[i * 3 + 2].set_title(gene + " : loocv", fontsize=10)
+
+        for ax in axes:
+            ax.axis('off')
+
+        for ax in axes.ravel():
+            if not (len(ax.images)):
+                fig.delaxes(ax)
+
+        plt.tight_layout()
+        plt.savefig(output_file)
 
         return self
 
