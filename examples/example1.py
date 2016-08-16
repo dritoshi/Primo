@@ -49,7 +49,7 @@ if __name__ == '__main__':
     #                                 conversion_table_file="../data/uid_symbol.tsv")
 
     # Image show of interest genes
-    gene_list = ['Xl.1685', 'Xl.16508', 'Xl.1588']
+    gene_list = ['Xl.1685', 'Xl.16508', 'Xl.1588', 'Xl.48530']
     s.plot_spatial_interest(output_dir, gene_list=gene_list, is_uid=True,
                             conversion_table_file="./data/uid_symbol.tsv")
 

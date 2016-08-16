@@ -90,15 +90,17 @@ class SpatialExpression(object):
 
         self.pixel_ = np.int(np.sqrt(Y.shape[1]))
 
-        self.spatial_ = np.dot(X, Y)
-        self.spatial_ = self.spatial_ / np.array(self.p_obj_.mean_position_)
+        self.spatial_ = np.dot(X, Y) / np.array(self.p_obj_.mean_position_)
+        self.spatial_ = np.nan_to_num(self.spatial_)
+        self.spatial_ = (self.spatial_.T / self.spatial_.sum(axis=1)).T
+
+        self.spatial_images_ = [self.spatial_[i].reshape(
+            self.pixel_, self.pixel_)
+                                for i in range(self.spatial_.shape[0])]
+
         self.spatial_ = pd.DataFrame(self.spatial_,
                                      index=self.genes_,
-                                     columns=self.pixel_names_).fillna(0)
-
-        self.spatial_images_ = [np.array(self.spatial_.ix[i]).reshape(
-            self.pixel_, self.pixel_)
-                                for i in range(len(self.genes_))]
+                                     columns=self.pixel_names_)
 
         return self
 
@@ -182,6 +184,7 @@ class SpatialExpression(object):
 
             spatial = np.dot(X, Y) / np.array(Y_mean)
             spatial = np.nan_to_num(spatial)
+            spatial = spatial / spatial.sum()
             spatial_image = spatial.reshape(self.pixel_, self.pixel_)
 
             self.spatial_loocv_.append(spatial)
