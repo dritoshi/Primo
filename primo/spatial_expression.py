@@ -241,13 +241,13 @@ class SpatialExpression(object):
 
         return self
 
-    def tsne(self, plot=False, output_dir=None, **kwargs):
+    def tsne(self, output_dir, **kwargs):
         """t-SNE
+
+        Calculates t-SNE for two directions and plots the results.
 
         Parameters
         ----------
-        plot : bool
-            If `True`, export PNG file.
         output_dir : str
             If plot is `True`, export PNG file to this directory.
         **kwargs
@@ -259,22 +259,58 @@ class SpatialExpression(object):
             Returns the instance itself
 
         """
+
+        self._calc_tsne(**kwargs)
+        self._plot_tsne(output_dir)
+
+        return self
+
+    def _calc_tsne(self, **kwargs):
+        """Calculats t-SNE for two directions
+
+        Parameters
+        ----------
+        **kwargs :
+            keyword arguments for sklearn.manifold.TSNE.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
         df = self.spatial_.ix[self.r_obj_.variable_genes_,
                               self.w_obj_.pixel_name_embryo_]
 
         self.tsne_spatial_pixels = TSNE(**kwargs).fit_transform(1 - df.corr())
         self.tsne_spatial_genes = TSNE(**kwargs).fit_transform(1 - df.T.corr())
 
-        if plot is True:
-            fig, axes = plt.subplots(1, 2, figsize=(8, 4))
-            axes = axes.flatten()
-            plot_tsne(self.tsne_spatial_pixels, ax=axes[0])
-            plot_tsne(self.tsne_spatial_genes, ax=axes[1])
-            axes[0].set_title("Spatial gene expression\n(t-SNE: pixels)")
-            axes[1].set_title("Spatial gene expression\n(t-SNE: genes)")
-            plt.tight_layout()
-            output_file = os.path.join(output_dir, "tsne_spatial.png")
-            plt.savefig(output_file)
+        return self
+
+    def _plot_tsne(self, output_dir):
+        """Plots the results of t-SNE
+
+        Parameters
+        ----------
+        output_dir : str
+            The PNG file is exported to this directory.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
+        output_file = os.path.join(output_dir, "tsne_spatial.png")
+
+        fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+        axes = axes.flatten()
+        plot_tsne(self.tsne_spatial_pixels, ax=axes[0])
+        plot_tsne(self.tsne_spatial_genes, ax=axes[1])
+        axes[0].set_title("Spatial gene expression\n(t-SNE: pixels)")
+        axes[1].set_title("Spatial gene expression\n(t-SNE: genes)")
+        plt.tight_layout()
+        plt.savefig(output_file)
 
         return self
 
