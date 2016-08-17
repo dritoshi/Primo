@@ -321,12 +321,20 @@ class SpatialExpression(object):
         """
 
         if algorithm == "KMeans":
-            method = KMeans(n_clusters, **kwargs)
+            method = KMeans(n_clusters=n_clusters, **kwargs)
+
         elif algorithm == "AgglomerativeClustering":
-            method = AgglomerativeClustering(n_clusters, **kwargs)
+            connectivity = kneighbors_graph(self.tsne_spatial_pixels_,
+                                            n_neighbors=20,
+                                            include_self=False)
+            method = AgglomerativeClustering(n_clusters=n_clusters,
+                                             connectivity=connectivity,
+                                             linkage="ward",
+                                             **kwargs)
+
         else:
             print("algorithm parameter should be `KMeans` or "
-                  "`AggromerativeClustering`.")
+                  "`AgglomerativeClustering`.")
             raise ValueError
 
         self.clusters_ = method.fit_predict(self.tsne_spatial_pixels_)
