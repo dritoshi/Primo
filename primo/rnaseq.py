@@ -145,7 +145,7 @@ class RNAseq(object):
         Return
         -------
         self : object
-            Retunrs the instance itself
+            Returns the instance itself
 
         """
         mean = self.df_rnaseq_.sum().mean()
@@ -153,6 +153,28 @@ class RNAseq(object):
         index_not_outlier = abs(self.df_rnaseq_.sum() - mean) < (val * sd)
 
         self.df_rnaseq_ = self.df_rnaseq_.ix[:, index_not_outlier]
+        self._remove_all_zero()
+        self._update_info()
+
+        return self
+
+    def remove_cells_no_wish(self, w_obj):
+        """Remove cells with which WISH gene expression is all zero
+
+        Parameters
+        ----------
+        W : :obj: `w_obj`
+            primo.wish.Wish instance.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+        """
+        genes = w_obj.genes_
+        index_not_all_zero_wish = (self.df_rnaseq_.ix[genes, :].sum() != 0)
+
+        self.df_rnaseq_ = self.df_rnaseq_.ix[:, index_not_all_zero_wish]
         self._remove_all_zero()
         self._update_info()
 
