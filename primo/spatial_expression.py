@@ -12,10 +12,13 @@ import numpy as np
 import pandas as pd
 
 from sklearn.manifold import TSNE
+from sklearn.cluster import KMeans, AgglomerativeClustering
+from sklearn.neighbors import kneighbors_graph
+from sklearn.metrics import silhouette_samples
 
 from primo.utils import plot_tsne
 
-__all__ = ['SpatialExpression', ]
+__all__ = ['SpatialExpression', '_make_custum_cmap']
 
 
 class SpatialExpression(object):
@@ -268,6 +271,162 @@ class SpatialExpression(object):
 
         return self
 
+    def clustering(self, n_clusters, algorithm, output_dir, cmap, **kwargs):
+        """Clustering pixels
+
+        Parameters
+        ----------
+        n_clusters : int
+            Number of clusters
+        algorithm : str
+            Name of clustering algorithm to be used.
+        output_dir : str
+            The resulted PNG file is exported to this directory.
+        cmap : :obj:``
+            Color map.
+        **kwargs : kwargs
+            Keyword arguments for clustering algorithm.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+        """
+
+        self.calc_clustering(n_clusters, algorithm, **kwargs)
+        self.plot_clustering(output_dir, cmap=cmap)
+
+        return self
+
+    def calc_clustering(self, n_clusters, algorithm, **kwargs):
+        """Calculats clustering
+
+        Parameters
+        ----------
+        n_clusters : int
+            Number of clusters
+        algorithm : str
+            Name of clustering algorithm to be used.
+        **kwargs : kwargs
+            Keyword arguments for clustering algorithm
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+        """
+
+        if algorithm == "KMeans":
+            method = KMeans(n_clusters, **kwargs)
+        elif algorithm == "AgglomerativeClustering":
+            method = AgglomerativeClustering(n_clusters, **kwargs)
+        else:
+            print("algorithm parameter should be `KMeans` or "
+                  "`AggromerativeClustering`.")
+            raise ValueError
+
+        self.clusters_ = method.fit_predict(self.tsne_spatial_pixels)
+        self.clusters_ = self.clusters_ + 1
+
+        self.df_cluster = pd.DataFrame(index=('cluster',),
+                                       columns=self.w_obj_.pixel_name_all)
+        self.df_cluster = self.df_cluster.fillna(0)
+        self.df_cluster.ix[
+            'cluster', self.w_obj_.pixel_name_embryo] = self.clusters_
+
+        return self
+
+    def plot_clustering(self, output_dir, cmap):
+        """Plot the results of clustering.
+
+        Parameters
+        ----------
+        output_dir : str
+            The png file is exported to this directory.
+        cmap : :obj:`LinearSegmentedColormap`
+            Color map.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+        """
+
+        output_file = os.path.join(output_dir,
+                                   "Plot_clustering.png")
+        cmap = _make_custum_cmap(cmap)
+
+        fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+        axes = axes.flatten()
+
+        self._plot_clusters_image(ax=axes[0], cmap=cmap, mirror=True)
+        self._plot_clusters_tsne(ax=axes[1], cmap=cmap)
+        self._plot_clusters_silhouette(ax=axes[2], cmap=cmap)
+
+        plt.tight_layout()
+        plt.savefig(output_file)
+
+        return self
+
+    def _plot_clusters_image(self, ax, cmap, mirror=True):
+
+        im = np.array(self.df_cluster).reshape(
+            self.w_obj_.pixel_, self.w_obj_.pixel_)
+
+        if mirror:
+            im_left = im[:, :int(self.w_obj_.pixel_ / 2)]
+            im[:, int(self.w_obj_.pixel_ / 2):] = im_left[:, ::-1]
+
+        ax.imshow(im, cmap=cmap)
+        ax.set_title("Plot clusters on\nembryonic field")
+        plt.setp(ax.get_xticklabels(), visible=False)
+        plt.setp(ax.get_yticklabels(), visible=False)
+
+    def _plot_clusters_tsne(self, ax, cmap):
+
+        X = self.tsne_spatial_pixels.T[0]
+        Y = self.tsne_spatial_pixels.T[1]
+
+        ax.scatter(X, Y, cmap=cmap, c=self.clusters_, s=10,
+                   vmin=0, vmax=max(self.clusters))
+
+        ax.set_xlabel("Dim 1")
+        ax.set_ylabel("Dim 2")
+        plt.setp(ax.get_xticklabels(), visible=False)
+        plt.setp(ax.get_yticklabels(), visible=False)
+
+    def _plot_clusters_silhouette(self, ax, cmap):
+
+        silhouette_vals = silhouette_samples(self.tsne_spatial_pixels,
+                                             self.clusters_,
+                                             metric="euclidean")
+
+        y_ax_lower, y_ax_upper = 0, 0
+        yticks = []
+
+        for cl in range(1, max(self.clusters_)+1):
+            c_silhouette_vals = silhouette_vals[self.clusters_ == cl]
+            c_silhouette_vals.sort()
+            y_ax_upper += len(c_silhouette_vals)
+            color = cmap(cl / max(self.clusters_))
+
+            ax.barh(range(y_ax_lower, y_ax_upper),
+                    c_silhouette_vals,
+                    height=1.0,
+                    edgecolor='none',
+                    color=color)
+
+            yticks.append((y_ax_lower + y_ax_upper) / 2)
+            y_ax_lower += len(c_silhouette_vals)
+
+        silhouette_avg = np.mean(silhouette_vals)
+
+        ax.axvline(silhouette_avg, color="red", linestyle="--")
+        ax.set_yticks(yticks)
+        ax.set_yticklabels(range(1, max(self.clusters_)+1))
+        ax.set_ylabel('Cluster')
+        ax.set_xlabel('Silhouette coefficient')
+
     def _calc_tsne(self, **kwargs):
         """Calculats t-SNE for two directions
 
@@ -351,3 +510,12 @@ class SpatialExpression(object):
 
         plt.tight_layout()
         plt.savefig(output_file)
+
+
+def _make_custum_cmap(cmap):
+
+    cmaplist = [cmap(i) for i in range(cmap.N)]
+    cmaplist[0] = (1, 1, 1, 1.0)
+    cmap_custom = cmap.from_list('Custom cmap', cmaplist, cmap.N)
+
+    return cmap_custom
