@@ -10,6 +10,7 @@ if __name__ == '__main__':
     from primo.spatial_expression import SpatialExpression
 
     output_dir = "./results_example2"
+    uid_table = "./data/uid_symbol.tsv"
 
     r = (RNAseq().
          load_scRNAseq_data("./data/St13_1st_dge.txt.gz",
@@ -27,7 +28,7 @@ if __name__ == '__main__':
     w = (Wish().
          load_WISH_images("./data/wish",
                           annotation_type="symbol").
-         symbol_to_uid("./data/uid_symbol.tsv").
+         symbol_to_uid(uid_table).
          filter_images(pixel=30).
          plot_wish(output_dir)
          )
@@ -42,8 +43,10 @@ if __name__ == '__main__':
          load_inputs(r, w, p).
          predict().
          tsne(output_dir=output_dir, init="pca", random_state=12345).
-         clustering(n_clusters=10, algorithm='KMeans',
-                    output_dir=output_dir, cmap=None)
+         clustering(n_clusters=10, algorithm='AgglomerativeClustering',
+                    output_dir=output_dir, cmap=None).
+         extract_associated_genes(output_dir, is_uid=True,
+                                  conversion_table_file=uid_table)
          )
 
     # It takes long time. Do not run
@@ -53,7 +56,7 @@ if __name__ == '__main__':
     # Image show of interest genes
     gene_list = ['Xl.1685', 'Xl.16508', 'Xl.1588', 'Xl.48530']
     s.plot_spatial_interest(output_dir, gene_list=gene_list, is_uid=True,
-                            conversion_table_file="./data/uid_symbol.tsv")
+                            conversion_table_file=uid_table)
 
     # LOOCV
     p.calc_position_loocv()
