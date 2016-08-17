@@ -271,7 +271,8 @@ class SpatialExpression(object):
 
         return self
 
-    def clustering(self, n_clusters, algorithm, output_dir, cmap, **kwargs):
+    def clustering(self, n_clusters, algorithm,
+                   output_dir, cmap=None, **kwargs):
         """Clustering pixels
 
         Parameters
@@ -292,6 +293,9 @@ class SpatialExpression(object):
         self : object
             Returns the instance itself.
         """
+
+        if cmap is None:
+            cmap = plt.cm.jet
 
         self.calc_clustering(n_clusters, algorithm, **kwargs)
         self.plot_clustering(output_dir, cmap=cmap)
@@ -325,14 +329,14 @@ class SpatialExpression(object):
                   "`AggromerativeClustering`.")
             raise ValueError
 
-        self.clusters_ = method.fit_predict(self.tsne_spatial_pixels)
+        self.clusters_ = method.fit_predict(self.tsne_spatial_pixels_)
         self.clusters_ = self.clusters_ + 1
 
-        self.df_cluster = pd.DataFrame(index=('cluster',),
-                                       columns=self.w_obj_.pixel_name_all)
-        self.df_cluster = self.df_cluster.fillna(0)
-        self.df_cluster.ix[
-            'cluster', self.w_obj_.pixel_name_embryo] = self.clusters_
+        self.df_cluster_ = pd.DataFrame(index=('cluster',),
+                                        columns=self.w_obj_.pixel_name_all_)
+        self.df_cluster_ = self.df_cluster_.fillna(0)
+        self.df_cluster_.ix[
+            'cluster', self.w_obj_.pixel_name_embryo_] = self.clusters_
 
         return self
 
@@ -370,7 +374,7 @@ class SpatialExpression(object):
 
     def _plot_clusters_image(self, ax, cmap, mirror=True):
 
-        im = np.array(self.df_cluster).reshape(
+        im = np.array(self.df_cluster_).reshape(
             self.w_obj_.pixel_, self.w_obj_.pixel_)
 
         if mirror:
@@ -378,17 +382,16 @@ class SpatialExpression(object):
             im[:, int(self.w_obj_.pixel_ / 2):] = im_left[:, ::-1]
 
         ax.imshow(im, cmap=cmap)
-        ax.set_title("Plot clusters on\nembryonic field")
         plt.setp(ax.get_xticklabels(), visible=False)
         plt.setp(ax.get_yticklabels(), visible=False)
 
     def _plot_clusters_tsne(self, ax, cmap):
 
-        X = self.tsne_spatial_pixels.T[0]
-        Y = self.tsne_spatial_pixels.T[1]
+        X = self.tsne_spatial_pixels_.T[0]
+        Y = self.tsne_spatial_pixels_.T[1]
 
         ax.scatter(X, Y, cmap=cmap, c=self.clusters_, s=10,
-                   vmin=0, vmax=max(self.clusters))
+                   vmin=0, vmax=max(self.clusters_))
 
         ax.set_xlabel("Dim 1")
         ax.set_ylabel("Dim 2")
@@ -397,7 +400,7 @@ class SpatialExpression(object):
 
     def _plot_clusters_silhouette(self, ax, cmap):
 
-        silhouette_vals = silhouette_samples(self.tsne_spatial_pixels,
+        silhouette_vals = silhouette_samples(self.tsne_spatial_pixels_,
                                              self.clusters_,
                                              metric="euclidean")
 
@@ -444,8 +447,10 @@ class SpatialExpression(object):
         df = self.spatial_.ix[self.r_obj_.variable_genes_,
                               self.w_obj_.pixel_name_embryo_]
 
-        self.tsne_spatial_pixels = TSNE(**kwargs).fit_transform(1 - df.corr())
-        self.tsne_spatial_genes = TSNE(**kwargs).fit_transform(1 - df.T.corr())
+        self.tsne_spatial_pixels_ = TSNE(**kwargs).fit_transform(
+            1 - df.corr())
+        self.tsne_spatial_genes_ = TSNE(**kwargs).fit_transform(
+            1 - df.T.corr())
 
         return self
 
@@ -467,8 +472,8 @@ class SpatialExpression(object):
 
         fig, axes = plt.subplots(1, 2, figsize=(8, 4))
         axes = axes.flatten()
-        plot_tsne(self.tsne_spatial_pixels, ax=axes[0])
-        plot_tsne(self.tsne_spatial_genes, ax=axes[1])
+        plot_tsne(self.tsne_spatial_pixels_, ax=axes[0])
+        plot_tsne(self.tsne_spatial_genes_, ax=axes[1])
         axes[0].set_title("Spatial gene expression\n(t-SNE: pixels)")
         axes[1].set_title("Spatial gene expression\n(t-SNE: genes)")
         plt.tight_layout()
