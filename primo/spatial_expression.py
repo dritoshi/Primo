@@ -2,6 +2,8 @@ from __future__ import print_function
 
 import os
 
+from distutils.version import StrictVersion
+
 import matplotlib
 matplotlib.use("Agg")
 
@@ -340,6 +342,9 @@ class SpatialExpression(object):
         self.clusters_ = method.fit_predict(self.tsne_spatial_pixels_)
         self.clusters_ = self.clusters_ + 1
 
+        self.cluster_names_ = ["cluster" + str(i) for i
+                               in range(1, max(self.clusters_) + 1)]
+
         self.df_cluster_ = pd.DataFrame(index=('cluster',),
                                         columns=self.w_obj_.pixel_name_all_)
         self.df_cluster_ = self.df_cluster_.fillna(0)
@@ -379,6 +384,117 @@ class SpatialExpression(object):
         plt.savefig(output_file)
 
         return self
+
+    def extract_associated_genes(self, output_dir, is_uid=False,
+                                 conversion_table_file=None):
+        """Calculates and plots genes associated with clusters
+
+        Parameters
+        ----------
+        output_dir : str
+            The PNG file is exported to this directory.
+        is_uid : bool
+            If `True`, gene name is interpretted as Unigene ID.
+        conversion_table_file : str
+            If is_uid == `True`, input file path for conversion_table.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
+
+        self._calc_associated_genes()
+        self._plot_associated_genes(output_dir, is_uid, conversion_table_file)
+
+        return self
+
+    def _calc_associated_genes(self):
+        """Calculates gene association with clusters
+
+        Parameters
+        ----------
+
+        Return
+        ------
+        """
+
+        df_cluster_flatten = np.array(self.df_cluster_).flatten()
+        self.df_cluster_ohe = pd.get_dummies(df_cluster_flatten).T[1:]
+        self.df_cluster_ohe.columns = self.df_cluster_.columns
+
+        X = self.spatial_
+        Y = self.df_cluster_ohe.T
+
+        similarity = np.dot(X, Y)
+        similarity = (similarity - similarity.mean()) / similarity.std()
+
+        self.df_similarity = pd.DataFrame(similarity.T,
+                                          index=self.cluster_names_,
+                                          columns=self.genes_)
+
+#         self.associated_genes = dict()
+#         for cn in self.cluster_names_:
+#             genes = self.df_similarity.columns[self.df_similarity.ix[cn, :] > 3.0]
+#             self.associated_genes[cn] = list(genes)
+
+    def _plot_associated_genes(self, output_dir, is_uid,
+                               conversion_table_file):
+        """Plots genes associated with clusters
+
+        Parameteres
+        -----------
+        output_dir : str
+            The PNG file is exported to this directory.
+        is_uid : bool
+            If `True`, gene name is interpretted as Unigene ID.
+        conversion_table_file : str
+            If is_uid == `True`, input file path for conversion_table.
+
+        Return
+        ------
+        """
+
+        if is_uid:
+            df = pd.read_csv(conversion_table_file, sep="\t",
+                             names=('uid', 'symbol'))
+
+        for cn in self.cluster_names_:
+            output_file = os.path.join(output_dir,
+                                       "associated_genes_" +
+                                       cn + ".png")
+
+            if StrictVersion(pd.__version__) >= "0.17":
+                top_gene = self.df_similarity.T.sort_values(
+                    by=cn, ascending=False).index[0:10]
+            else:
+                top_gene = self.df_similarity.T.sort(
+                    columns=cn, ascending=False).index[0:10]
+
+            fig, axes = plt.subplots(2, 5, figsize=(10, 4))
+            axes = axes.flatten()
+
+            for i, gene in enumerate(top_gene):
+                ind = self.genes_.index(gene)
+                im = self.spatial_images_[ind]
+                axes[i].imshow(im, cmap=plt.cm.jet)
+                axes[i].axis('off')
+
+                if is_uid:
+                    symbol = df[df.uid == gene].symbol.values[0]
+                    title = gene + " : " + symbol
+                else:
+                    title = gene
+
+                axes[i].set_title(title, fontsize=10)
+
+            for ax in axes.ravel():
+                if not(len(ax.images)):
+                    fig.delaxes(ax)
+
+            plt.tight_layout()
+            plt.savefig(output_file)
 
     def _plot_clusters_image(self, ax, cmap, mirror=True):
 
@@ -482,8 +598,8 @@ class SpatialExpression(object):
         axes = axes.flatten()
         plot_tsne(self.tsne_spatial_pixels_, ax=axes[0])
         plot_tsne(self.tsne_spatial_genes_, ax=axes[1])
-        axes[0].set_title("Spatial gene expression\n(t-SNE: pixels)")
-        axes[1].set_title("Spatial gene expression\n(t-SNE: genes)")
+        axes[0].set_title("S (t-SNE: pixels)")
+        axes[1].set_title("S (t-SNE: genes)")
         plt.tight_layout()
         plt.savefig(output_file)
 
