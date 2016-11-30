@@ -187,7 +187,7 @@ class Position(object):
 
         return (mean_position, mean_position_image)
 
-    def plot_position(self, output_dir, num_cells=None):
+    def plot_position(self, output_dir, num_cells=None, cmap=None):
         """Plot inferred cell position
 
         Parameters
@@ -197,6 +197,8 @@ class Position(object):
         num_cells : :obj:`int`, optional
             Number of cells to be shown in exported png file.
             If `None`, all cells will be shown.
+        cmap : :obj:`matplotlib.colors.Colormap`, optional, default: None
+            matplotlib color map.
 
         Return
         ------
@@ -217,7 +219,7 @@ class Position(object):
         axes = axes.flatten()
 
         for i, cell in enumerate(self.r_obj_.cells_[0: num_cells]):
-            axes[i].imshow(self.position_images_[i], cmap=plt.cm.jet)
+            axes[i].imshow(self.position_images_[i], cmap=cmap)
             axes[i].axis('off')
             axes[i].set_title(cell, fontsize=10)
 
@@ -228,17 +230,19 @@ class Position(object):
         plt.tight_layout()
         plt.savefig(output_file)
 
-        self._plot_mean_position(output_dir)
+        self._plot_mean_position(output_dir, cmap)
 
         return self
 
-    def _plot_mean_position(self, output_dir):
+    def _plot_mean_position(self, output_dir, cmap=None):
         """Plot mean of inferred cell position
 
         Parameters
         ----------
         output_dir : str
             The png file is exported to this directory.
+        cmap : :obj:`matplotlib.colors.Colormap`, optional, default: None
+            matplotlib color map.
 
         Return
         ------
@@ -249,7 +253,7 @@ class Position(object):
 
         output_file = os.path.join(output_dir, "cell_position_mean.png")
         fig, ax = plt.subplots(1, 1, figsize=(6, 6))
-        ax.imshow(self.mean_position_image_)
+        ax.imshow(self.mean_position_image_, cmap=cmap)
         ax.axis('off')
         ax.set_title("Mean of cell position probability", fontsize=24)
         plt.tight_layout()

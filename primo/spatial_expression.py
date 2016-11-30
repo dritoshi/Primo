@@ -110,7 +110,7 @@ class SpatialExpression(object):
         return self
 
     def plot_spatial_variable(self, output_dir, is_uid=False,
-                              conversion_table_file=None):
+                              conversion_table_file=None, cmap=None):
         """Plot spatial gene expression pattern
 
         Parameters
@@ -132,13 +132,13 @@ class SpatialExpression(object):
         gene_list = self.r_obj_.variable_genes_
         output_file = os.path.join(output_dir, "spatial_variable.png")
         self._plot_image(output_file, gene_list, is_uid,
-                         conversion_table_file)
+                         conversion_table_file, cmap)
 
         return self
 
     def plot_spatial_interest(self, output_dir, gene_list,
                               is_uid=False,
-                              conversion_table_file=None):
+                              conversion_table_file=None, cmap=None):
         """Plot spatial gene expression pattern
 
         Parameters
@@ -161,7 +161,7 @@ class SpatialExpression(object):
 
         output_file = os.path.join(output_dir, "spatial_interest.png")
         self._plot_image(output_file, gene_list, is_uid,
-                         conversion_table_file)
+                         conversion_table_file, cmap)
 
         return self
 
@@ -197,13 +197,15 @@ class SpatialExpression(object):
 
         return self
 
-    def plot_loocv(self, output_dir):
+    def plot_loocv(self, output_dir, cmap=None):
         """Plots the results of LOOCV
 
         Parameters
         ----------
         output_dir : str
             The png file is saved in this directory.
+        cmap : :obj:`matplotlib.colors.Colormap`, optional, default: None
+            Matplotlib color map
 
         Return
         ------
@@ -231,10 +233,10 @@ class SpatialExpression(object):
             axes[i * 3 + 0].imshow(im1, cmap=plt.cm.Purples)
             axes[i * 3 + 0].set_title(gene + " : original", fontsize=10)
 
-            axes[i * 3 + 1].imshow(im2, cmap=plt.cm.jet)
+            axes[i * 3 + 1].imshow(im2, cmap=cmap)
             axes[i * 3 + 1].set_title(gene + " : inference", fontsize=10)
 
-            axes[i * 3 + 2].imshow(im3, cmap=plt.cm.jet)
+            axes[i * 3 + 2].imshow(im3, cmap=cmap)
             axes[i * 3 + 2].set_title(gene + " : loocv", fontsize=10)
 
         for ax in axes:
@@ -386,7 +388,7 @@ class SpatialExpression(object):
         return self
 
     def extract_associated_genes(self, output_dir, is_uid=False,
-                                 conversion_table_file=None):
+                                 conversion_table_file=None, cmap=None):
         """Calculates and plots genes associated with clusters
 
         Parameters
@@ -406,7 +408,8 @@ class SpatialExpression(object):
         """
 
         self._calc_associated_genes()
-        self._plot_associated_genes(output_dir, is_uid, conversion_table_file)
+        self._plot_associated_genes(output_dir, is_uid,
+                                    conversion_table_file, cmap)
 
         return self
 
@@ -440,7 +443,7 @@ class SpatialExpression(object):
 #             self.associated_genes[cn] = list(genes)
 
     def _plot_associated_genes(self, output_dir, is_uid,
-                               conversion_table_file):
+                               conversion_table_file, cmap=None):
         """Plots genes associated with clusters
 
         Parameteres
@@ -451,6 +454,8 @@ class SpatialExpression(object):
             If `True`, gene name is interpretted as Unigene ID.
         conversion_table_file : str
             If is_uid == `True`, input file path for conversion_table.
+        cmap : :obj:`matplotlib.colors.Colormap`, optional, default: None
+            Matplotlib color map
 
         Return
         ------
@@ -478,7 +483,7 @@ class SpatialExpression(object):
             for i, gene in enumerate(top_gene):
                 ind = self.genes_.index(gene)
                 im = self.spatial_images_[ind]
-                axes[i].imshow(im, cmap=plt.cm.jet)
+                axes[i].imshow(im, cmap=cmap)
                 axes[i].axis('off')
 
                 if is_uid:
@@ -606,7 +611,7 @@ class SpatialExpression(object):
         return self
 
     def _plot_image(self, output_file, gene_list,
-                    is_uid=False, conversion_table_file=None):
+                    is_uid=False, conversion_table_file=None, cmap=None):
 
         if is_uid:
             df = pd.read_csv(conversion_table_file, sep="\t",
@@ -629,7 +634,7 @@ class SpatialExpression(object):
         for i, gene in enumerate(gene_list):
             ind = self.genes_.index(gene)
             im = self.spatial_images_[ind]
-            axes[i].imshow(im, cmap=plt.cm.jet)
+            axes[i].imshow(im, cmap=cmap)
             axes[i].axis('off')
             axes[i].set_title(ax_title[i], fontsize=10)
 

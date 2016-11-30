@@ -140,13 +140,15 @@ class Wish(object):
 
         return self
 
-    def plot_wish(self, output_dir):
+    def plot_wish(self, output_dir, cmap=plt.cm.Purples):
         """Plot original and filtered WISH images
 
         Parameters
         ----------
         output_dir : str
             Image files are exported to output_dir
+        cmap : :obj:`matplotlib.colors.Colormap`, optional, default: plt.cm.Purples
+            Matplotlib color map
 
         Return
         ------
@@ -155,17 +157,17 @@ class Wish(object):
 
         """
 
-        self._plot_wish_pattern(self.wish_images_)
+        self._plot_wish_pattern(self.wish_images_, cmap)
         output_file = os.path.join(output_dir, "wish_original.png")
         plt.savefig(output_file)
 
-        self._plot_wish_pattern(self.wish_images_filtered_)
+        self._plot_wish_pattern(self.wish_images_filtered_, cmap)
         output_file = os.path.join(output_dir, "wish_filtered.png")
         plt.savefig(output_file)
 
         return self
 
-    def _plot_wish_pattern(self, images):
+    def _plot_wish_pattern(self, images, cmap):
         """plot images for WISH patterns
 
         Parameters
@@ -182,7 +184,7 @@ class Wish(object):
         axes = axes.flatten()
 
         for i, gene in enumerate(self.genes_):
-            axes[i].imshow(images[i], cmap=plt.cm.Purples)
+            axes[i].imshow(images[i], cmap=cmap)
             axes[i].axis('off')
             axes[i].set_title(gene, fontsize=20)
 
