@@ -132,25 +132,52 @@ class RNAseq(object):
 
         return self
 
-    def remove_outlier_cells(self, val):
+    def remove_outlier_cells(self, by="sd", how="both", val_sd=None,
+                             val_upper_lim=None, val_lower_lim=None):
         """Remove outlier cells
 
         Parameters
         ----------
-        val : float
-            If number of detected detected transcripts is not in
-            range of mean +- `val` * standard deviation,
-            the cells are ignored for further analyses.
+        by : str
+            This must be 'sd' or 'value' to cut out outlier cells.
+        how : str
+            This must be 'both', 'upper', or 'lower'.
+        val_sd : int
+            This value is multiplied by standard deviation of detected
+            transcripts.
+        val_upper_lim : int
+            Upper limit.
+        val_lower_lim : int
+            Lower limit.
 
         Return
-        -------
+        ------
         self : object
             Returns the instance itself
 
         """
-        mean = self.df_rnaseq_.sum().mean()
-        sd = self.df_rnaseq_.sum().std()
-        index_not_outlier = abs(self.df_rnaseq_.sum() - mean) < (val * sd)
+        if by == "sd":
+            mean = self.df_rnaseq_.sum().mean()
+            sd = self.df_rnaseq_.sum().std()
+            upper_lim = np.int(mean + val_sd * sd)
+            lower_lim = np.int(mean - val_sd * sd)
+        elif by == "value":
+            if how != "upper":
+                lower_lim = val_lower_lim
+            if how != "lower":
+                upper_lim = val_upper_lim
+        else:
+            print("Parameter 'by' must be 'sd' or 'value'.")
+
+        if how == "upper":
+            index_not_outlier = self.df_rnaseq_.sum() < upper_lim
+        elif how == "lower":
+            index_not_outlier = self.df_rnaseq_.sum() > lower_lim
+        elif how == "both":
+            index_not_outlier = ((lower_lim < self.df_rnaseq_.sum()) &
+                                 (self.df_rnaseq_.sum() < upper_lim))
+        else:
+            print("Parameter 'how' must be 'both', 'upper', or 'lower'.")
 
         self.df_rnaseq_ = self.df_rnaseq_.ix[:, index_not_outlier]
         self._remove_all_zero()
