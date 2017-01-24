@@ -388,6 +388,13 @@ class RNAseq(object):
         self.df_pca_ = PCA(**kwargs).fit_transform(
             self.df_rnaseq_scale_.ix[self.variable_genes_, :].T)
 
+        self.df_rnaseq_scale_genes_ = pd.DataFrame(
+            scale(self.df_rnaseq_log_, axis=0),
+            index=self.df_rnaseq_.index,
+            columns=self.df_rnaseq_.columns)
+        self.df_pca_genes_ = PCA(**kwargs).fit_transform(
+            self.df_rnaseq_scale_.ix[self.variable_genes_, :])
+
         return self
 
     def tsne(self, plot=False, output_dir=None, **kwargs):
@@ -409,9 +416,9 @@ class RNAseq(object):
 
         """
         self.tsne_rnaseq_cells_ = TSNE(**kwargs).fit_transform(
-            1 - self.df_rnaseq_variable_.corr())
+            self.df_pca_)
         self.tsne_rnaseq_genes_ = TSNE(**kwargs).fit_transform(
-            1 - self.df_rnaseq_variable_.T.corr())
+            self.df_pca_genes_)
 
         if plot is True:
             fig, axes = plt.subplots(1, 2, figsize=(8, 4))
