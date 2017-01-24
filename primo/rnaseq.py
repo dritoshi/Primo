@@ -421,20 +421,79 @@ class RNAseq(object):
             self.df_pca_genes_)
 
         if plot is True:
-            fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+            fig, axes = plt.subplots(1, 2, figsize=(10, 5))
             axes = axes.flatten()
-            plot_tsne(self.tsne_rnaseq_cells_, ax=axes[0])
-            plot_tsne(self.tsne_rnaseq_genes_, ax=axes[1])
-            axes[0].set_title("t-SNE: cells")
-            axes[1].set_title("t-SNE: genes")
+
+            axes[0].scatter(self.tsne_rnaseq_cells_[:, 0],
+                            self.tsne_rnaseq_cells_[:, 1],
+                            c="black",
+                            s=20,
+                            edgecolor='None')
+            axes[1].scatter(self.tsne_rnaseq_genes_[:, 0],
+                            self.tsne_rnaseq_genes_[:, 1],
+                            c="black",
+                            s=20,
+                            edgecolor='None')
+            axes[0].set_title("t-SNE: cells", fontsize=24)
+            axes[1].set_title("t-SNE: genes", fontsize=24)
+
+            for i in range(2):
+                axes[i].set_xlabel("Dim1", fontsize=14)
+                axes[i].set_ylabel("Dim2", fontsize=14)
+                axes[i].set_xticks([])
+                axes[i].set_yticks([])
+
             plt.tight_layout()
             output_file = os.path.join(output_dir, "tsne_rnaseq.png")
             plt.savefig(output_file)
 
         return self
 
-    def colorrize_gene(self):
-        pass
+    def colorize_genes(self, gene_list):
+        """Colorize gene expression in tSNE space
+
+        Parameters
+        ----------
+        gene_list : list
+            List of genes
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
+        ncol = 4
+        nrow = np.int(np.ceil(len(gene_list) * 1.0 / ncol))
+
+        fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 5, nrow * 5))
+        axes = axes.flatten()
+
+        for i, gene in enumerate(gene_list):
+            if gene not in self.df_rnaseq_.index:
+                axes[i].text(0.5, 0.5, "N.D.",
+                             horizontalalignment="center",
+                             verticalalignment="center",
+                             fontsize=24)
+            else:
+                axes[i].scatter(self.tsne_rnaseq_cells_[:, 0],
+                                self.tsne_rnaseq_cells_[:, 1],
+                                c=self.df_rnaseq_scale_.ix[gene, :],
+                                cmap=plt.cm.jet,
+                                s=20,
+                                edgecolor='None')
+            axes[i].set_xlabel("Dim1", fontsize=14)
+            axes[i].set_ylabel("Dim2", fontsize=14)
+            axes[i].set_title(gene, fontsize=24)
+            axes[i].set_xticks([])
+            axes[i].set_yticks([])
+
+        for i in range(len(gene_list), len(axes)):
+            fig.delaxes(axes[i])
+
+        plt.tight_layout()
+
+        return self
 
     def _remove_all_zero(self):
         genes_not_all_zero = (self.df_rnaseq_.sum(axis=1) != 0)
