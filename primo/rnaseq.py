@@ -10,6 +10,8 @@ from distutils.version import StrictVersion
 import pandas as pd
 import numpy as np
 
+from sklearn.preprocessing import scale
+from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
 from .utils import plot_tsne
@@ -86,6 +88,27 @@ class RNAseq(object):
         self._remove_all_zero()
         self._update_info()
 
+        return self
+
+    def remove_spike(self, spike_type="ERCC"):
+        """ Remove data for spike RNA
+
+        Parameters
+        ----------
+        spike_type : str
+            For example, 'ERCC'
+
+        Return
+        ------
+        self : object
+            Returns the instance itself
+        """
+        is_spike = [x.startswith(spike_type) for x in self.df_rnaseq_.index]
+        is_gene = [not x.startswith(spike_type) for x in self.df_rnaseq_.index]
+        self.df_spike_ = self.df_rnaseq_[is_spike]
+        self.df_rnaseq_ = self.df_rnaseq_[is_gene]
+        self._remove_all_zero()
+        self._update_info()
         return self
 
     def remove_gene_maxlessthan(self, max_count):
@@ -339,6 +362,31 @@ class RNAseq(object):
         ax.legend(loc="upper right")
         plt.tight_layout()
         plt.savefig(output_file)
+
+        return self
+
+    def pca(self, adding_factor=0.1, **kwargs):
+        """PCA
+
+        Parameters
+        ----------
+        adding_factor : float
+            Log transformation will be done after addition of adding factor
+        **kwargs
+            Arbitary keyword arguments.
+
+        Return
+        ------
+        self : object
+            Return the instance itself
+        """
+        self.df_rnaseq_log_ = np.log(self.df_rnaseq_ + adding_factor)
+        self.df_rnaseq_scale_ = pd.DataFrame(
+            scale(self.df_rnaseq_log_, axis=1),
+            index=self.df_rnaseq_.index,
+            columns=self.df_rnaseq_.columns)
+        self.df_pca_ = PCA(**kwargs).fit_transform(
+            self.df_rnaseq_scale_.ix[self.variable_genes_, :].T)
 
         return self
 
