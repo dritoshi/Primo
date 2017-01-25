@@ -47,7 +47,8 @@ class RNAseq(object):
         pass
 
     def load_scRNAseq_data(self, path_or_dataframe, num_stamp=None,
-                           from_file=True, annotation_type="symbol"):
+                           from_file=True, annotation_type="symbol",
+                           spike_type=None):
         """Load single cell RNA-seq data.
 
         Parameters
@@ -61,6 +62,8 @@ class RNAseq(object):
         annotation_type : str
             Type of gene annotation.
             Examples: symbol, uid (Unigene ID)
+        spike_type : str
+            Name of spike used in this experiment. (Ex. "ERCC")
 
         Return
         ------
@@ -85,30 +88,18 @@ class RNAseq(object):
                              order(ascending=False).index)[0:num_stamp]
             self.df_rnaseq_ = self.df_rnaseq_.ix[:, ind_stamp]
 
+        if spike_type:
+            self.spike_type_ = str(spike_type)
+            is_spike = [x.startswith(spike_type)
+                        for x in self.df_rnaseq_.index]
+            is_gene = [not x.startswith(spike_type)
+                       for x in self.df_rnaseq_.index]
+            self.df_spike_ = self.df_rnaseq_[is_spike]
+            self.df_rnaseq_ = self.df_rnaseq_[is_gene]
+
         self._remove_all_zero()
         self._update_info()
 
-        return self
-
-    def remove_spike(self, spike_type="ERCC"):
-        """ Remove data for spike RNA
-
-        Parameters
-        ----------
-        spike_type : str
-            For example, 'ERCC'
-
-        Return
-        ------
-        self : object
-            Returns the instance itself
-        """
-        is_spike = [x.startswith(spike_type) for x in self.df_rnaseq_.index]
-        is_gene = [not x.startswith(spike_type) for x in self.df_rnaseq_.index]
-        self.df_spike_ = self.df_rnaseq_[is_spike]
-        self.df_rnaseq_ = self.df_rnaseq_[is_gene]
-        self._remove_all_zero()
-        self._update_info()
         return self
 
     def remove_gene_maxlessthan(self, max_count):
