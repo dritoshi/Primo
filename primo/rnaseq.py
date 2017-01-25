@@ -3,6 +3,7 @@ from __future__ import print_function
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import os
 from distutils.version import StrictVersion
@@ -529,13 +530,15 @@ class RNAseq(object):
 
         return self
 
-    def colorize_genes(self, gene_list):
+    def colorize_genes(self, gene_list, plot_colorbar=True):
         """Colorize gene expression in tSNE space
 
         Parameters
         ----------
         gene_list : list
             List of genes
+        plot_colorbar : bool
+            Plot or not plot colorbar for normalized gene expression
 
         Return
         ------
@@ -546,7 +549,12 @@ class RNAseq(object):
         ncol = 4
         nrow = np.int(np.ceil(len(gene_list) * 1.0 / ncol))
 
-        fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 5, nrow * 5))
+        if plot_colorbar:
+            fig, axes = plt.subplots(nrow, ncol,
+                                     figsize=(ncol * 5 * 1.07, nrow * 5))
+        else:
+            fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 5, nrow * 5))
+
         axes = axes.flatten()
 
         for i, gene in enumerate(gene_list):
@@ -556,12 +564,17 @@ class RNAseq(object):
                              verticalalignment="center",
                              fontsize=24)
             else:
-                axes[i].scatter(self.tsne_rnaseq_cells_[:, 0],
-                                self.tsne_rnaseq_cells_[:, 1],
-                                c=self.df_rnaseq_scale_.ix[gene, :],
-                                cmap=plt.cm.jet,
-                                s=20,
-                                edgecolor='None')
+                S = axes[i].scatter(self.tsne_rnaseq_cells_[:, 0],
+                                    self.tsne_rnaseq_cells_[:, 1],
+                                    c=self.df_rnaseq_scale_.ix[gene, :],
+                                    cmap=plt.cm.jet,
+                                    s=20,
+                                    edgecolor='None')
+                if plot_colorbar:
+                    driver = make_axes_locatable(axes[i])
+                    ax_cb = driver.new_horizontal(size="3%", pad=0.05)
+                    fig.add_axes(ax_cb)
+                    plt.colorbar(S, cax=ax_cb)
             axes[i].set_xlabel("Dim1", fontsize=14)
             axes[i].set_ylabel("Dim2", fontsize=14)
             axes[i].set_title(gene, fontsize=24)
