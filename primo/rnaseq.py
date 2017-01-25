@@ -198,7 +198,7 @@ class RNAseq(object):
 
         return self
 
-    def remove_outlier_cells(self, by="sd", how="both", val_sd=None,
+    def remove_outlier_cells(self, on="entropy", by="sd", how="both", val_sd=None,
                              val_upper_lim=None, val_lower_lim=None):
         """Remove outlier cells
 
@@ -222,9 +222,20 @@ class RNAseq(object):
             Returns the instance itself
 
         """
+        if on == "entropy":
+            target = [entropy(self.df_rnaseq_.iloc[:, i].values)
+                      for i in range(self.df_rnaseq_.shape[1])]
+            target = np.array(target)
+        elif on == "transcript":
+            target = self.df_rnaseq_.sum().values
+        elif on == "gene":
+            target = (self.df_rnaseq_ > 0).sum().values
+        else:
+            print("Parameter 'on' must be 'entropy', 'transcript' or 'gene'")
+
         if by == "sd":
-            mean = self.df_rnaseq_.sum().mean()
-            sd = self.df_rnaseq_.sum().std()
+            mean = target.mean()
+            sd = target.std()
             upper_lim = np.int(mean + val_sd * sd)
             lower_lim = np.int(mean - val_sd * sd)
         elif by == "value":
@@ -236,12 +247,12 @@ class RNAseq(object):
             print("Parameter 'by' must be 'sd' or 'value'.")
 
         if how == "upper":
-            index_not_outlier = self.df_rnaseq_.sum() < upper_lim
+            index_not_outlier = target < upper_lim
         elif how == "lower":
-            index_not_outlier = self.df_rnaseq_.sum() > lower_lim
+            index_not_outlier = target > lower_lim
         elif how == "both":
-            index_not_outlier = ((lower_lim < self.df_rnaseq_.sum()) &
-                                 (self.df_rnaseq_.sum() < upper_lim))
+            index_not_outlier = ((lower_lim < target) &
+                                 (target < upper_lim))
         else:
             print("Parameter 'how' must be 'both', 'upper', or 'lower'.")
 
