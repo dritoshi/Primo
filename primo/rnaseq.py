@@ -9,6 +9,11 @@ from distutils.version import StrictVersion
 
 import pandas as pd
 import numpy as np
+from scipy.stats import entropy
+
+import seaborn as sns
+sns.set_style("white")
+
 
 from sklearn.preprocessing import scale
 from sklearn.decomposition import PCA
@@ -99,6 +104,53 @@ class RNAseq(object):
 
         self._remove_all_zero()
         self._update_info()
+
+        return self
+
+    def overview(self):
+        """Overview RNAseq data
+        """
+
+        if self.spike_type_:
+            fig, axes = plt.subplots(2, 3, figsize=(16, 8))
+        else:
+            fig, axes = plt.subplots(1, 3, figsize=(16, 4))
+
+        axes = axes.flatten()
+
+        num_detected_transcript = self.df_rnaseq_.sum().values
+        sns.distplot(num_detected_transcript, ax=axes[0])
+        axes[0].set_title("Number of detected transcript", fontsize=16)
+        axes[0].set_xlim(0,)
+
+        num_detected_gene = (self.df_rnaseq_ > 0).sum().values
+        sns.distplot(num_detected_gene, ax=axes[1])
+        axes[1].set_title("Number of detected gene", fontsize=16)
+        axes[1].set_xlim(0,)
+
+        entr = [entropy(self.df_rnaseq_.iloc[:, i].values)
+                for i in range(self.df_rnaseq_.shape[1])]
+        sns.distplot(entr, ax=axes[2])
+        axes[2].set_title("Entropy", fontsize=16)
+
+        if self.spike_type_:
+            num_detected_transcript_spike = self.df_spike_.sum().values
+            sns.distplot(num_detected_transcript_spike, ax=axes[3])
+            axes[3].set_title("Number of detected transcript (spike)",
+                              fontsize=16)
+            axes[3].set_xlim(0,)
+
+            num_detected_gene_spike = (self.df_spike_ > 0).sum().values
+            sns.distplot(num_detected_gene_spike, ax=axes[4])
+            axes[4].set_title("Number of detected gene (spike)", fontsize=16)
+            axes[4].set_xlim(0,)
+
+            entr_spike = [entropy(self.df_spike_.iloc[:, i].values)
+                          for i in range(self.df_spike_.shape[1])]
+            sns.distplot(entr_spike, ax=axes[5])
+            axes[5].set_title("Entropy (spike)", fontsize=16)
+
+        fig.tight_layout()
 
         return self
 
