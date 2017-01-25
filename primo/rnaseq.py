@@ -285,11 +285,14 @@ class RNAseq(object):
 
         return self
 
-    def normalize(self, normalize_factor=None):
-        """Normalize dataframe
+    def normalize(self, execute=True, normalize_factor=None):
+        """Normalize or not normalize dataframe
 
         Parameters
         ----------
+        execute : bool
+            If normalization is needed, this must be True.
+            If normalization is not needed, this must be False.
         normaize_factor : None, or int
             Total transccipts is normalized to this value.
             If `None`, total of total transcripts is normalized to
@@ -301,11 +304,15 @@ class RNAseq(object):
             Returns the instance itself
 
         """
+
         if normalize_factor is None:
             normalize_factor = self.df_rnaseq_.sum().mean()
 
-        self.df_rnaseq_ = (1.0 * normalize_factor *
-                           self.df_rnaseq_ / self.df_rnaseq_.sum())
+        self.df_rnaseq_not_norm_ = self.df_rnaseq_
+
+        if execute:
+            self.df_rnaseq_ = (1.0 * normalize_factor *
+                               self.df_rnaseq_ / self.df_rnaseq_.sum())
 
         self._remove_all_zero()
         self._update_info()
@@ -530,13 +537,16 @@ class RNAseq(object):
 
         return self
 
-    def colorize_genes(self, gene_list, plot_colorbar=True):
+    def colorize_genes(self, gene_list, coloring="scale_log",
+                       plot_colorbar=False):
         """Colorize gene expression in tSNE space
 
         Parameters
         ----------
         gene_list : list
             List of genes
+        coloring : str
+            The way of coloring dot
         plot_colorbar : bool
             Plot or not plot colorbar for normalized gene expression
 
@@ -564,9 +574,17 @@ class RNAseq(object):
                              verticalalignment="center",
                              fontsize=24)
             else:
+                if coloring == "raw_count":
+                    color = self.df_rnaseq_not_norm_.ix[gene, :]
+                elif coloring == "normalized_count":
+                    color = self.df_rnaseq_.ix[gene, :],
+                elif coloring == "scale_log":
+                    color = self.df_rnaseq_scale_.ix[gene, :],
+                else:
+                    print("Parameter 'coloring' must be scale_log, raw_count or normalized_count.")
                 S = axes[i].scatter(self.tsne_rnaseq_cells_[:, 0],
                                     self.tsne_rnaseq_cells_[:, 1],
-                                    c=self.df_rnaseq_scale_.ix[gene, :],
+                                    c=color,
                                     cmap=plt.cm.jet,
                                     s=20,
                                     edgecolor='None')
