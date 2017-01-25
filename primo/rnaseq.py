@@ -311,8 +311,8 @@ class RNAseq(object):
 
         return self
 
-    def filter_variable_genes(self, z_cutoff=2, max_count=5, bin_num=200,
-                              stack=False):
+    def filter_variable_genes_z(self, z_cutoff=2, max_count=5, bin_num=200,
+                                stack=False):
         """Filters genes which coefficient of variation are high.
 
         Parameters
@@ -362,6 +362,32 @@ class RNAseq(object):
                           dispersion_measure.std())
                 variable_genes_bin = df_log_bin.index[z_disp > z_cutoff].values
                 self.variable_genes_.extend(variable_genes_bin)
+
+        self.df_rnaseq_variable_ = self.df_rnaseq_.ix[self.variable_genes_, :]
+        self.num_genes_variable_ = self.df_rnaseq_variable_.shape[0]
+
+        return self
+
+    def filter_variable_genes_line(self, threshold=0.5):
+        """Filter variable genes by line.
+
+        Parameters
+        ----------
+        threshold : float
+            Genes are identified as variable genes of:
+            log10(CV ** 2) + log10(MEAN) > threshold
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+        """
+
+        mean = self.df_rnaseq_.mean(axis=1)
+        std = self.df_rnaseq_.std(axis=1)
+        cv = 1.0 * std / mean
+        self.variable_genes_ = list(self.df_rnaseq_.index[
+            (np.log10(cv ** 2) + np.log10(mean)) > threshold])
 
         self.df_rnaseq_variable_ = self.df_rnaseq_.ix[self.variable_genes_, :]
         self.num_genes_variable_ = self.df_rnaseq_variable_.shape[0]
