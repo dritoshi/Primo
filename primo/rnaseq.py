@@ -537,6 +537,52 @@ class RNAseq(object):
 
         return self
 
+    def colorize_pcs(self, num_pc=16):
+        """Colorize PC scores in tSNE space
+
+        Parameters
+        ----------
+        num_pc : int
+            Number of PC to be plotted.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
+        if num_pc > self.df_pca_.shape[1]:
+            print("Number of PC was smaller than num_pc.")
+            num_pc = self.df_pca_.shape[1]
+
+        ncol = 4
+        nrow = np.int(np.ceil(num_pc * 1.0 / ncol))
+
+        fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 5, nrow * 5))
+        axes = axes.flatten()
+
+        for i in range(num_pc):
+            color = self.df_pca_.T[i]
+            title = "PC" + str(i+1)
+            axes[i].scatter(self.tsne_rnaseq_cells_[:, 0],
+                            self.tsne_rnaseq_cells_[:, 1],
+                            c=color,
+                            cmap=plt.cm.jet,
+                            s=20,
+                            edgecolor='None')
+            axes[i].set_xlabel("Dim1", fontsize=14)
+            axes[i].set_ylabel("Dim2", fontsize=14)
+            axes[i].set_title(title, fontsize=24)
+            axes[i].set_xticks([])
+            axes[i].set_yticks([])
+
+        for i in range(num_pc, len(axes)):
+            fig.delaxes(axes[i])
+
+        plt.tight_layout()
+
+        return self
+
     def colorize_genes(self, gene_list, coloring="scale_log",
                        plot_colorbar=False):
         """Colorize gene expression in tSNE space
