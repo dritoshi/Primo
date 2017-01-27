@@ -584,7 +584,7 @@ class RNAseq(object):
         return self
 
     def colorize_genes(self, gene_list, coloring="scale_log",
-                       plot_colorbar=False):
+                       plot_colorbar=False, suptitle=None):
         """Colorize gene expression in tSNE space
 
         Parameters
@@ -606,10 +606,16 @@ class RNAseq(object):
         nrow = np.int(np.ceil(len(gene_list) * 1.0 / ncol))
 
         if plot_colorbar:
-            fig, axes = plt.subplots(nrow, ncol,
-                                     figsize=(ncol * 5 * 1.07, nrow * 5))
+            figw = ncol * 5 * 1.07
         else:
-            fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 5, nrow * 5))
+            figw = ncol * 5
+
+        if suptitle is not None:
+            figh = nrow * 5 + 1
+        else:
+            figh = nrow * 5
+
+        fig, axes = plt.subplots(nrow, ncol, figsize=(figw, figh))
 
         axes = axes.flatten()
 
@@ -646,9 +652,15 @@ class RNAseq(object):
             axes[i].set_yticks([])
 
         for i in range(len(gene_list), len(axes)):
-            fig.delaxes(axes[i])
+            if i >= ncol:
+                fig.delaxes(axes[i])
 
         plt.tight_layout()
+
+        if suptitle is not None:
+            fig.suptitle(suptitle, x=0, horizontalalignment='left',
+                         fontsize=32, fontweight='bold')
+            fig.subplots_adjust(top=1-1.0/figh)
 
         return self
 
