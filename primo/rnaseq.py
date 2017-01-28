@@ -20,7 +20,7 @@ from sklearn.preprocessing import scale
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
-from .utils import plot_tsne
+# from .utils import plot_tsne
 
 __all__ = ['RNAseq', ]
 
@@ -199,8 +199,9 @@ class RNAseq(object):
 
         return self
 
-    def remove_outlier_cells(self, on="entropy", by="sd", how="both", val_sd=None,
-                             val_upper_lim=None, val_lower_lim=None):
+    def remove_outlier_cells(self, on="entropy", by="sd", how="both",
+                             val_sd=None, val_upper_lim=None,
+                             val_lower_lim=None):
         """Remove outlier cells
 
         Parameters
@@ -633,7 +634,8 @@ class RNAseq(object):
                 elif coloring == "scale_log":
                     color = self.df_rnaseq_scale_.ix[gene, :],
                 else:
-                    print("Parameter 'coloring' must be scale_log, raw_count or normalized_count.")
+                    print("Parameter 'coloring' must be "
+                          "scale_log, raw_count or normalized_count.")
                 S = axes[i].scatter(self.tsne_rnaseq_cells_[:, 0],
                                     self.tsne_rnaseq_cells_[:, 1],
                                     c=color,
@@ -664,6 +666,68 @@ class RNAseq(object):
 
         return self
 
+    def calc_factorloading(self):
+        """Calculate factor loading
+
+        Parameters
+        ----------
+
+        Return
+        ------
+        self : object
+            Returns the instance itself
+        """
+
+        X = self.df_pca_
+        Y = self.df_rnaseq_scale_.T
+        Z = corr_inter(X, Y)
+        row_name = ["PC" + str(i+1) for i in range(X.shape[1])]
+        col_name = Y.columns.values
+        self.df_factorloading_ = pd.DataFrame(Z, index=row_name,
+                                              columns=col_name)
+
+        return self
+
+    def colorize_correlated_genes(self, num_pc, **kwargs):
+        """Colorize gene expression of which are highly correlated
+        with PC scores in t-SNE space
+
+        Parameters
+        ----------
+        num_pc : int
+            Number of PC
+        **kwargs
+            Arbitary keyword arguments.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself
+        """
+
+        if num_pc > self.df_factor_loading_.shape[0]:
+            num_pc = self.df_factor_loading_.shape[0]
+
+        for i in range(num_pc):
+            pc_name = "PC" + str(i+1)
+            fl_sorted = self.df_factor_loading_.ix[pc_name, :].sort_values()
+
+            gene_list = fl_sorted[-8:].index.values
+            val_lim = np.round(fl_sorted[-8].values[0], 2)
+            suptitle = ("PC" + str(i) +
+                        "-correlated genes (positively, > " +
+                        str(val_lim) + ")")
+            self.colorize_genes(gene_list, suptitle, **kwargs)
+
+            gene_list = fl_sorted[:8].index.values
+            val_lim = np.round(fl_sorted[8].values[0], 2)
+            suptitle = ("PC" + str(i) +
+                        "-correlated genes (negatively, < " +
+                        str(val_lim) + ")")
+            self.colorize_genes(gene_list, suptitle, **kwargs)
+
+        return self
+
     def _remove_all_zero(self):
         genes_not_all_zero = (self.df_rnaseq_.sum(axis=1) != 0)
         cells_not_all_zero = (self.df_rnaseq_.sum(axis=0) != 0)
@@ -679,3 +743,9 @@ class RNAseq(object):
         self.num_cells_ = len(self.cells_)
 
         return self
+
+
+def corr_inter(X, Y):
+    X_normed = (X - X.mean(axis=0)) / X.std(axis=0, ddof=0)
+    Y_normed = (Y - Y.mean(axis=0)) / Y.std(axis=0, ddof=0)
+    return np.dot(X_normed.T, Y_normed) / X.shape[0]
