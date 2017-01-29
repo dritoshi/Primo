@@ -666,7 +666,7 @@ class RNAseq(object):
 
         return self
 
-    def calc_factorloading(self):
+    def calc_factor_loading(self):
         """Calculate factor loading
 
         Parameters
@@ -683,8 +683,8 @@ class RNAseq(object):
         Z = corr_inter(X, Y)
         row_name = ["PC" + str(i+1) for i in range(X.shape[1])]
         col_name = Y.columns.values
-        self.df_factorloading_ = pd.DataFrame(Z, index=row_name,
-                                              columns=col_name)
+        self.df_factor_loading_ = pd.DataFrame(Z, index=row_name,
+                                               columns=col_name)
 
         return self
 
