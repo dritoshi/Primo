@@ -733,6 +733,30 @@ class RNAseq(object):
 
         return self
 
+    def merge_facs_data(self, facs_instance_list):
+        """Merge FACS data to RNAseqdata
+
+        Parameters
+        ----------
+        facs_instance_list : list
+            list of primo.facs instance
+
+        Return
+        ------
+        self : object
+            Returns the instance itself
+        """
+
+        df = pd.DataFrame()
+
+        for f in facs_instance_list:
+            df = df.append(f.df_barcode_facs_, ignore_index=True)
+
+        df = df[df.barcode.isin(self.cells_)]
+        self.df_facs_ = df[df.barcode == self.cells_]
+
+        return self
+
     def _remove_all_zero(self):
         genes_not_all_zero = (self.df_rnaseq_.sum(axis=1) != 0)
         cells_not_all_zero = (self.df_rnaseq_.sum(axis=0) != 0)
