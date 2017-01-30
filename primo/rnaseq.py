@@ -612,7 +612,7 @@ class RNAseq(object):
             figw = ncol * 5
 
         if suptitle is not None:
-            figh = nrow * 5 + 1
+            figh = nrow * 5 + 1.5
         else:
             figh = nrow * 5
 
@@ -662,11 +662,11 @@ class RNAseq(object):
         if suptitle is not None:
             fig.suptitle(suptitle, x=0, horizontalalignment='left',
                          fontsize=32, fontweight='bold')
-            fig.subplots_adjust(top=1-1.0/figh)
+            fig.subplots_adjust(top=1-1.5/figh)
 
         return self
 
-    def calc_factor_loading(self):
+    def calc_factor_loading(self, output_dir=None):
         """Calculate factor loading
 
         Parameters
@@ -686,9 +686,14 @@ class RNAseq(object):
         self.df_factor_loading_ = pd.DataFrame(Z, index=row_name,
                                                columns=col_name)
 
+        if output_dir is not None:
+            output_file = os.path.join(output_dir, "factor_loading.tsv")
+            self.df_factor_loading_.to_csv(output_file, sep="\t", index=False)
+
         return self
 
-    def colorize_correlated_genes(self, num_pc, **kwargs):
+    def colorize_correlated_genes(self, num_pc=5, num_gene=8,
+                                  coloring="scale_log", plot_colorbar=False):
         """Colorize gene expression of which are highly correlated
         with PC scores in t-SNE space
 
@@ -712,19 +717,19 @@ class RNAseq(object):
             pc_name = "PC" + str(i+1)
             fl_sorted = self.df_factor_loading_.ix[pc_name, :].sort_values()
 
-            gene_list = fl_sorted[-8:].index.values
-            val_lim = np.round(fl_sorted[-8].values[0], 2)
-            suptitle = ("PC" + str(i) +
-                        "-correlated genes (positively, > " +
+            gene_list = fl_sorted[-1 * num_gene:].index.values
+            val_lim = np.round(fl_sorted[-1 * num_gene], 2)
+            suptitle = (pc_name + "-correlated genes (positively, > " +
                         str(val_lim) + ")")
-            self.colorize_genes(gene_list, suptitle, **kwargs)
+            self.colorize_genes(gene_list, coloring, plot_colorbar,
+                                suptitle)
 
-            gene_list = fl_sorted[:8].index.values
-            val_lim = np.round(fl_sorted[8].values[0], 2)
-            suptitle = ("PC" + str(i) +
-                        "-correlated genes (negatively, < " +
+            gene_list = fl_sorted[:num_gene].index.values
+            val_lim = np.round(fl_sorted[num_gene], 2)
+            suptitle = (pc_name + "-correlated genes (negatively, < " +
                         str(val_lim) + ")")
-            self.colorize_genes(gene_list, suptitle, **kwargs)
+            self.colorize_genes(gene_list, coloring, plot_colorbar,
+                                suptitle)
 
         return self
 
