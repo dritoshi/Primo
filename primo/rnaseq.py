@@ -757,6 +757,78 @@ class RNAseq(object):
 
         return self
 
+    def colorize_channel(self, channel_list, coloring="raw",
+                         plot_colorbar=True):
+        """Colorize strength of FACS channel
+
+        Parameters
+        ----------
+        channel_list : list
+            List of channels to be shown
+        coloring : str
+            The way of coloring. "raw" or "log".
+
+        plot_colorbar : bool
+            Plot or not plot colorbar for normalized gene expression
+
+        Return
+        ------
+        self : object
+            Returns the instance itself
+        """
+
+        ncol = 3
+        nrow = np.int(np.ceil(len(channel_list) * 1.0 / ncol))
+
+        if plot_colorbar:
+            figw = ncol * 5 * 1.07
+        else:
+            figw = ncol * 5
+
+        figh = nrow * 5
+
+        fig, axes = plt.subplots(nrow, ncol, figsize=(figw, figh))
+
+        axes = axes.flatten()
+
+        for i, channel in enumerate(channel_list):
+            if channel not in self.df_facs_.columns:
+                axes[i].text(0.5, 0.5, "No channel",
+                             horizontalalignment="center",
+                             verticalalignment="center",
+                             fontsize=24)
+            else:
+                if coloring == "raw":
+                    color = self.df_facs_.ix[:, channel]
+                elif coloring == "log":
+                    color = np.log(self.df_facs_.ix[:, channel]+0.01),
+                else:
+                    print("Parameter 'coloring' must be 'raw' or 'log'.")
+                S = axes[i].scatter(self.tsne_rnaseq_cells_[:, 0],
+                                    self.tsne_rnaseq_cells_[:, 1],
+                                    c=color,
+                                    cmap=plt.cm.jet,
+                                    s=20,
+                                    edgecolor='None')
+                if plot_colorbar:
+                    driver = make_axes_locatable(axes[i])
+                    ax_cb = driver.new_horizontal(size="3%", pad=0.05)
+                    fig.add_axes(ax_cb)
+                    plt.colorbar(S, cax=ax_cb)
+            axes[i].set_xlabel("Dim1", fontsize=14)
+            axes[i].set_ylabel("Dim2", fontsize=14)
+            axes[i].set_title(str(channel), fontsize=24)
+            axes[i].set_xticks([])
+            axes[i].set_yticks([])
+
+        for i in range(len(channel_list), len(axes)):
+            if i >= ncol:
+                fig.delaxes(axes[i])
+
+        plt.tight_layout()
+
+        return self
+
     def _remove_all_zero(self):
         genes_not_all_zero = (self.df_rnaseq_.sum(axis=1) != 0)
         cells_not_all_zero = (self.df_rnaseq_.sum(axis=0) != 0)
