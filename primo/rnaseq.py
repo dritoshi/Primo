@@ -584,25 +584,32 @@ class RNAseq(object):
 
         return self
 
-    def colorize_genes(self, gene_list, coloring="scale_log",
-                       plot_colorbar=False, suptitle=None):
-        """Colorize gene expression in tSNE space
+    def colorize_genes(self, gene_list, space="tSNE", channel_list=None,
+                       coloring="scale_log", plot_colorbar=False,
+                       suptitle=None):
+        """Colorize gene expression
 
         Parameters
         ----------
         gene_list : list
             List of genes
+        space : str
+            "tSNE" or "FACS" (Ch1 vs Ch2)
+        channel_list : list
+            List of FACS channel. Length must be 2.
         coloring : str
             The way of coloring dot
         plot_colorbar : bool
             Plot or not plot colorbar for normalized gene expression
+        suptitle : str
+            The title of entire figure
 
         Return
         ------
         self : object
             Returns the instance itself.
-
         """
+
         ncol = 4
         nrow = np.int(np.ceil(len(gene_list) * 1.0 / ncol))
 
@@ -636,22 +643,37 @@ class RNAseq(object):
                 else:
                     print("Parameter 'coloring' must be "
                           "scale_log, raw_count or normalized_count.")
-                S = axes[i].scatter(self.tsne_rnaseq_cells_[:, 0],
-                                    self.tsne_rnaseq_cells_[:, 1],
-                                    c=color,
+
+                if space == "tSNE":
+                    X = self.tsne_rnaseq_cells_[:, 0]
+                    Y = self.tsne_rnaseq_cells_[:, 1]
+                    axes[i].set_xlabel("Dim1", fontsize=14)
+                    axes[i].set_ylabel("Dim2", fontsize=14)
+                    axes[i].set_xticks([])
+                    axes[i].set_yticks([])
+                elif space == "FACS":
+                    channel_x = channel_list[0]
+                    channel_y = channel_list[1]
+                    X = self.df_facs_.ix[:, channel_x]
+                    Y = self.df_facs_.ix[:, channel_y]
+                    axes[i].set_xlabel(str(channel_x), fontsize=14)
+                    axes[i].set_ylabel(str(channel_y), fontsize=14)
+                else:
+                    print("Parameter 'space' must be "
+                          "tSNE or FACS.")
+
+                S = axes[i].scatter(X, Y, c=color,
                                     cmap=plt.cm.jet,
                                     s=20,
                                     edgecolor='None')
+
                 if plot_colorbar:
                     driver = make_axes_locatable(axes[i])
                     ax_cb = driver.new_horizontal(size="3%", pad=0.05)
                     fig.add_axes(ax_cb)
                     plt.colorbar(S, cax=ax_cb)
-            axes[i].set_xlabel("Dim1", fontsize=14)
-            axes[i].set_ylabel("Dim2", fontsize=14)
+
             axes[i].set_title(gene, fontsize=24)
-            axes[i].set_xticks([])
-            axes[i].set_yticks([])
 
         for i in range(len(gene_list), len(axes)):
             if i >= ncol:
@@ -692,8 +714,9 @@ class RNAseq(object):
 
         return self
 
-    def colorize_correlated_genes(self, num_pc=5, num_gene=8,
-                                  coloring="scale_log", plot_colorbar=False):
+    def colorize_correlated_genes(self, num_pc=5, num_gene=8, space="tSNE",
+                                  channel_list=None, coloring="scale_log",
+                                  plot_colorbar=False):
         """Colorize gene expression of which are highly correlated
         with PC scores in t-SNE space
 
@@ -718,18 +741,19 @@ class RNAseq(object):
             fl_sorted = self.df_factor_loading_.ix[pc_name, :].sort_values()
 
             gene_list = fl_sorted[-1 * num_gene:].index.values
+            gene_list = gene_list[::-1]
             val_lim = np.round(fl_sorted[-1 * num_gene], 2)
             suptitle = (pc_name + "-correlated genes (positively, > " +
                         str(val_lim) + ")")
-            self.colorize_genes(gene_list, coloring, plot_colorbar,
-                                suptitle)
+            self.colorize_genes(gene_list, space, channel_list, coloring,
+                                plot_colorbar, suptitle)
 
             gene_list = fl_sorted[:num_gene].index.values
             val_lim = np.round(fl_sorted[num_gene], 2)
             suptitle = (pc_name + "-correlated genes (negatively, < " +
                         str(val_lim) + ")")
-            self.colorize_genes(gene_list, coloring, plot_colorbar,
-                                suptitle)
+            self.colorize_genes(gene_list, space, channel_list, coloring,
+                                plot_colorbar, suptitle)
 
         return self
 
