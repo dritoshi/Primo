@@ -67,7 +67,7 @@ class FACS(object):
             print('Currently, machine must be "MoFlo" or "SH-800".')
 
         df["well"] = [str(x) + str(y).zfill(2) for x, y in zip(
-            df["Sort Index X"], df["Sort Index Y"])]
+            df["Sort Index Y"], df["Sort Index X"])]
 
         self.df_facs_data_ = df
 
