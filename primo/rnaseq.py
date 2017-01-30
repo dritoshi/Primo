@@ -513,6 +513,12 @@ class RNAseq(object):
             fig, axes = plt.subplots(1, 2, figsize=(10, 5))
             axes = axes.flatten()
 
+            for i in range(2):
+                axes[i].set_xlabel("Dim1", fontsize=14)
+                axes[i].set_ylabel("Dim2", fontsize=14)
+                axes[i].set_xticks([])
+                axes[i].set_yticks([])
+
             axes[0].scatter(self.tsne_rnaseq_cells_[:, 0],
                             self.tsne_rnaseq_cells_[:, 1],
                             c="black",
@@ -523,14 +529,9 @@ class RNAseq(object):
                             c="black",
                             s=20,
                             edgecolor='None')
+
             axes[0].set_title("t-SNE: cells", fontsize=24)
             axes[1].set_title("t-SNE: genes", fontsize=24)
-
-            for i in range(2):
-                axes[i].set_xlabel("Dim1", fontsize=14)
-                axes[i].set_ylabel("Dim2", fontsize=14)
-                axes[i].set_xticks([])
-                axes[i].set_yticks([])
 
             plt.tight_layout()
             output_file = os.path.join(output_dir, "tsne_rnaseq.png")
@@ -565,20 +566,23 @@ class RNAseq(object):
         for i in range(num_pc):
             color = self.df_pca_.T[i]
             title = "PC" + str(i+1)
-            axes[i].scatter(self.tsne_rnaseq_cells_[:, 0],
-                            self.tsne_rnaseq_cells_[:, 1],
-                            c=color,
-                            cmap=plt.cm.jet,
-                            s=20,
-                            edgecolor='None')
+            X = self.tsne_rnaseq_cells_[:, 0],
+            Y = self.tsne_rnaseq_cells_[:, 1],
             axes[i].set_xlabel("Dim1", fontsize=14)
             axes[i].set_ylabel("Dim2", fontsize=14)
-            axes[i].set_title(title, fontsize=24)
             axes[i].set_xticks([])
             axes[i].set_yticks([])
 
+            axes[i].scatter(X, Y, c=color,
+                            cmap=plt.cm.jet,
+                            s=20,
+                            edgecolor='None')
+
+            axes[i].set_title(title, fontsize=24)
+
         for i in range(num_pc, len(axes)):
-            fig.delaxes(axes[i])
+            if i >= ncol:
+                fig.delaxes(axes[i])
 
         plt.tight_layout()
 
@@ -633,6 +637,10 @@ class RNAseq(object):
                              horizontalalignment="center",
                              verticalalignment="center",
                              fontsize=24)
+                axes[i].set_xlabel("", fontsize=14)
+                axes[i].set_ylabel("", fontsize=14)
+                axes[i].set_xticks([])
+                axes[i].set_yticks([])
             else:
                 if coloring == "raw_count":
                     color = self.df_rnaseq_not_norm_.ix[gene, :]
@@ -816,6 +824,14 @@ class RNAseq(object):
         axes = axes.flatten()
 
         for i, channel in enumerate(channel_list):
+
+            X = self.tsne_rnaseq_cells_[:, 0]
+            Y = self.tsne_rnaseq_cells_[:, 1]
+            axes[i].set_xlabel("Dim1", fontsize=14)
+            axes[i].set_ylabel("Dim2", fontsize=14)
+            axes[i].set_xticks([])
+            axes[i].set_yticks([])
+
             if channel not in self.df_facs_.columns:
                 axes[i].text(0.5, 0.5, "No channel",
                              horizontalalignment="center",
@@ -828,22 +844,19 @@ class RNAseq(object):
                     color = np.log(self.df_facs_.ix[:, channel]+0.01),
                 else:
                     print("Parameter 'coloring' must be 'raw' or 'log'.")
-                S = axes[i].scatter(self.tsne_rnaseq_cells_[:, 0],
-                                    self.tsne_rnaseq_cells_[:, 1],
-                                    c=color,
+
+                S = axes[i].scatter(X, Y, c=color,
                                     cmap=plt.cm.jet,
                                     s=20,
                                     edgecolor='None')
+
                 if plot_colorbar:
                     driver = make_axes_locatable(axes[i])
                     ax_cb = driver.new_horizontal(size="3%", pad=0.05)
                     fig.add_axes(ax_cb)
                     plt.colorbar(S, cax=ax_cb)
-            axes[i].set_xlabel("Dim1", fontsize=14)
-            axes[i].set_ylabel("Dim2", fontsize=14)
+
             axes[i].set_title(str(channel), fontsize=24)
-            axes[i].set_xticks([])
-            axes[i].set_yticks([])
 
         for i in range(len(channel_list), len(axes)):
             if i >= ncol:
