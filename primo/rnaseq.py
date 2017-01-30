@@ -534,12 +534,12 @@ class RNAseq(object):
             axes[1].set_title("t-SNE: genes", fontsize=24)
 
             plt.tight_layout()
-            output_file = os.path.join(output_dir, "tsne_rnaseq.png")
+            output_file = os.path.join(output_dir, "tSNE.png")
             plt.savefig(output_file)
 
         return self
 
-    def colorize_pcs(self, num_pc=16):
+    def colorize_pcs(self, output_dir, num_pc=16):
         """Colorize PC scores in tSNE space
 
         Parameters
@@ -586,17 +586,22 @@ class RNAseq(object):
 
         plt.tight_layout()
 
+        output_file = os.path.join(output_dir, "tSNE_PCscore.png")
+        plt.savefig(output_file)
+
         return self
 
-    def colorize_genes(self, gene_list, space="tSNE", channel_list=None,
-                       coloring="scale_log", plot_colorbar=False,
-                       suptitle=None):
+    def colorize_genes(self, gene_list, output_file, space="tSNE",
+                       channel_list=None, coloring="scale_log",
+                       plot_colorbar=False, suptitle=None):
         """Colorize gene expression
 
         Parameters
         ----------
         gene_list : list
             List of genes
+        output_file : str
+            Name of output file
         space : str
             "tSNE" or "FACS" (Ch1 vs Ch2)
         channel_list : list
@@ -694,9 +699,11 @@ class RNAseq(object):
                          fontsize=32, fontweight='bold')
             fig.subplots_adjust(top=1-1.5/figh)
 
+        plt.savefig(output_file)
+
         return self
 
-    def calc_factor_loading(self, output_dir=None):
+    def calc_factor_loading(self, output_dir):
         """Calculate factor loading
 
         Parameters
@@ -716,15 +723,18 @@ class RNAseq(object):
         self.df_factor_loading_ = pd.DataFrame(Z, index=row_name,
                                                columns=col_name)
 
-        if output_dir is not None:
-            output_file = os.path.join(output_dir, "factor_loading.tsv")
-            self.df_factor_loading_.to_csv(output_file, sep="\t", index=False)
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+
+        output_file = os.path.join(output_dir, "factor_loading.tsv")
+        self.df_factor_loading_.T.to_csv(output_file, sep="\t",
+                                         index=True, index_label="GeneSymbol")
 
         return self
 
-    def colorize_correlated_genes(self, num_pc=5, num_gene=8, space="tSNE",
-                                  channel_list=None, coloring="scale_log",
-                                  plot_colorbar=False):
+    def colorize_correlated_genes(self, num_pc=5, num_gene=8, output_dir=None,
+                                  space="tSNE", channel_list=None,
+                                  coloring="scale_log", plot_colorbar=False):
         """Colorize gene expression of which are highly correlated
         with PC scores in t-SNE space
 
@@ -741,6 +751,9 @@ class RNAseq(object):
             Returns the instance itself
         """
 
+        if output_dir is None:
+            output_dir = "./"
+
         if num_pc > self.df_factor_loading_.shape[0]:
             num_pc = self.df_factor_loading_.shape[0]
 
@@ -753,15 +766,21 @@ class RNAseq(object):
             val_lim = np.round(fl_sorted[-1 * num_gene], 2)
             suptitle = (pc_name + "-correlated genes (positively, > " +
                         str(val_lim) + ")")
-            self.colorize_genes(gene_list, space, channel_list, coloring,
-                                plot_colorbar, suptitle)
+            output_file = os.path.join(output_dir,
+                                       space + "_" + pc_name +
+                                       "-correlated_positively.png")
+            self.colorize_genes(gene_list, output_file, space, channel_list,
+                                coloring, plot_colorbar, suptitle)
 
             gene_list = fl_sorted[:num_gene].index.values
             val_lim = np.round(fl_sorted[num_gene], 2)
             suptitle = (pc_name + "-correlated genes (negatively, < " +
                         str(val_lim) + ")")
-            self.colorize_genes(gene_list, space, channel_list, coloring,
-                                plot_colorbar, suptitle)
+            output_file = os.path.join(output_dir,
+                                       space + "_" + pc_name +
+                                       "-correlated_negatively.png")
+            self.colorize_genes(gene_list, output_file, space, channel_list,
+                                coloring, plot_colorbar, suptitle)
 
         return self
 
@@ -789,8 +808,8 @@ class RNAseq(object):
 
         return self
 
-    def colorize_channel(self, channel_list, coloring="raw",
-                         plot_colorbar=True):
+    def colorize_channel(self, channel_list, output_dir,
+                         coloring="raw", plot_colorbar=True):
         """Colorize strength of FACS channel
 
         Parameters
@@ -863,6 +882,8 @@ class RNAseq(object):
                 fig.delaxes(axes[i])
 
         plt.tight_layout()
+        output_file = os.path.join(output_dir, "tSNE_FACSchannel.png")
+        plt.savefig(output_file)
 
         return self
 
