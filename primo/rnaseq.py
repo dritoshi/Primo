@@ -46,6 +46,30 @@ class RNAseq(object):
         Gene expression matrix
     df_rnaseq_variable_ : DataFrame
         Gene expression matrix (only variable genes)
+    spike_type_ : str
+        Type of spike RNA. ex) "ERCC"
+    df_spike_ : DataFrame
+        Gene expression matrix for spike RNA
+    df_rnaseq_not_norm_ : DataFrame
+        Gene expression matrix, not normalized
+    df_rnaseq_log_ : DataFrame
+        Gene expression matrix (log2 transformed)
+    df_rnaseq_scale_ : DataFrame
+        Gene expression matrix (scaled after log2 transformation)
+    df_rnaseq_scale_genes_ : DataFrame
+        Scaled values on genes
+    df_pca_ : DataFrame
+        PC scores for cells
+    df_pca_genes_ : DataFrame
+        PC scores for genes
+    tsne_rnaseq_cells_ : DataFrame
+        t-SNE for cells
+    tsne_rnaseq_genes_ : DataFrame
+        t-SNE for genes
+    df_factor_loading_ : DataFrame
+        Factor loading in PCA, genes.
+    df_facs_ : DataFrame
+        FACS channel values
     """
 
     def __init__(self):
