@@ -190,7 +190,7 @@ class RNAseq(object):
 
             df_rnaseq = df_rnaseq.append(tmp_df.T, ignore_index=False)
 
-        self.df_rnaseq_ = df_rnaseq.T
+        self.df_rnaseq_ = df_rnaseq.T.fillna(0)
 
         self.annotation_type_ = annotation_type
 
