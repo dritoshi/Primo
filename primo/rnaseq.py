@@ -77,8 +77,8 @@ class RNAseq(object):
         pass
 
     def load_scRNAseq_data(self, path_or_dataframe, num_stamp=None,
-                           from_file=True, annotation_type="symbol",
-                           spike_type=None):
+                           from_file=True, label=None,
+                           annotation_type="symbol", spike_type=None):
         """Load single cell RNA-seq data.
 
         Parameters
@@ -89,6 +89,8 @@ class RNAseq(object):
             Number of STAMP
         from_file : bool
             If `True` load data from tab-separated text
+        label : str
+            Experimental label. ex.) plate, replication
         annotation_type : str
             Type of gene annotation.
             Examples: symbol, uid (Unigene ID)
@@ -118,6 +120,12 @@ class RNAseq(object):
                              order(ascending=False).index)[0:num_stamp]
             self.df_rnaseq_ = self.df_rnaseq_.ix[:, ind_stamp]
 
+        self.label_ = label
+
+        if label is not None:
+            self.df_rnaseq_.columns = [x + "_label:" + str(self.label_)
+                                       for x
+                                       in self.df_rnaseq_.columns]
         if spike_type:
             self.spike_type_ = str(spike_type)
             is_spike = [x.startswith(spike_type)
@@ -156,34 +164,35 @@ class RNAseq(object):
         ------
         self : object
             Returns the instance itself
-
         """
 
         if len(list_path) != len(list_label):
             print("Length of list_path and list_label must be the same.")
             return None
 
-        num_sample = len(list_label)
-
         df_rnaseq = pd.DataFrame()
 
         for i, label in enumerate(list_label):
             tmp_df = pd.read_csv(list_path[i], sep="\t", index_col=0)
-            cell_name = [x + "_" + label for x in tmp_df.columns]
+            cell_name = [x + "_label:" + label for x in tmp_df.columns]
             tmp_df.columns = cell_name
 
-        df_rnaseq = df_rnaseq.append(tmp_df.T, ignore_index=False)
+            if list_num_stamp is not None:
+                if StrictVersion(pd.__version__) >= "0.17":
+                    ind_stamp = (tmp_df.sum().
+                                 sort_values(ascending=False)
+                                 .index)[0:list_num_stamp[i]]
+                else:
+                    ind_stamp = (tmp_df.sum().
+                                 order(ascending=False)
+                                 .index)[0:list_num_stamp[i]]
+                tmp_df = tmp_df.ix[:, ind_stamp]
+
+            df_rnaseq = df_rnaseq.append(tmp_df.T, ignore_index=False)
+
+        self.df_rnaseq_ = df_rnaseq.T
 
         self.annotation_type_ = annotation_type
-
-        if num_stamp is not None:
-            if StrictVersion(pd.__version__) >= "0.17":
-                ind_stamp = (self.df_rnaseq_.sum().
-                             sort_values(ascending=False).index)[0:num_stamp]
-            else:
-                ind_stamp = (self.df_rnaseq_.sum().
-                             order(ascending=False).index)[0:num_stamp]
-            self.df_rnaseq_ = self.df_rnaseq_.ix[:, ind_stamp]
 
         if spike_type:
             self.spike_type_ = str(spike_type)
@@ -1013,7 +1022,7 @@ def corr_inter(X, Y):
     return np.dot(X_normed.T, Y_normed) / X.shape[0]
 
 
-#def concatenate_rnaseq_instance(list_rnaseq, list_label):
+# def concatenate_rnaseq_instance(list_rnaseq, list_label):
 #    """Concatenate primo.rnaseq instance
 #
 #    Parameters
