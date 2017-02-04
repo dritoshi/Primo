@@ -915,8 +915,9 @@ class RNAseq(object):
             df = df.append(f.df_barcode_facs_, ignore_index=True)
 
         df = df[df.barcode.isin(self.cells_)]
-        df = df[df.barcode == self.cells_]
-        self.df_facs_ = df.set_index("barcode")
+        df = df.set_index("barcode")
+        df = df.ix[self.cells_, :]
+        self.df_facs_ = df
 
         return self
 
