@@ -7,6 +7,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import os
 from distutils.version import StrictVersion
+from itertools import cycle
 
 import pandas as pd
 import numpy as np
@@ -997,6 +998,43 @@ class RNAseq(object):
         plt.tight_layout()
         output_file = os.path.join(output_dir, "tSNE_FACSchannel.png")
         plt.savefig(output_file)
+
+        return self
+
+    def colorize_label(self):
+        """Colorize dots for each label on t-SNE space
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        self : object
+            Returns the instance itself.
+        """
+
+        list_label = [x.split("_label:")[1] for x in self.df_rnaseq_.columns]
+        series_label = pd.Series(list_label)
+        factor_label = list(set(list_label))
+
+        palette = cycle(sns.color_palette("hls", len(factor_label)))
+
+        fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+
+        ax.set_xlabel("Dim1", fontsize=14)
+        ax.set_ylabel("Dim2", fontsize=14)
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+        for i, label in enumerate(factor_label):
+            cell = np.where(series_label == label)
+            X = self.tsne_rnaseq_cells_[cell, 0]
+            Y = self.tsne_rnaseq_cells_[cell, 1]
+            c = next(palette)
+            ax.scatter(X, Y, c=c, s=5,
+                       edgecolors='None', label=label)
+        plt.legend(markerscale=3.0, bbox_to_anchor=(1.05, 1),
+                   loc=2, borderaxespad=0.)
 
         return self
 
