@@ -1001,11 +1001,13 @@ class RNAseq(object):
 
         return self
 
-    def colorize_label(self):
+    def colorize_label(self, output_dir):
         """Colorize dots for each label on t-SNE space
 
         Parameters
         ----------
+        output_dir : str
+            Output directory
 
         Returns
         -------
@@ -1016,6 +1018,7 @@ class RNAseq(object):
         list_label = [x.split("_label:")[1] for x in self.df_rnaseq_.columns]
         series_label = pd.Series(list_label)
         factor_label = list(set(list_label))
+        factor_label.sort()
 
         palette = cycle(sns.color_palette("hls", len(factor_label)))
 
@@ -1035,6 +1038,9 @@ class RNAseq(object):
                        edgecolors='None', label=label)
         plt.legend(markerscale=3.0, bbox_to_anchor=(1.05, 1),
                    loc=2, borderaxespad=0.)
+
+        output_file = os.path.join(output_dir, "tSNE_label.png")
+        plt.savefig(output_file)
 
         return self
 
