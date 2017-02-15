@@ -127,7 +127,9 @@ class RNAseq(object):
             self.df_rnaseq_.columns = [x + "_label:" + str(self.label_)
                                        for x
                                        in self.df_rnaseq_.columns]
-        if spike_type:
+        if spike_type is None:
+            self.spike_type_ = None
+        else:
             self.spike_type_ = str(spike_type)
             is_spike = [x.startswith(spike_type)
                         for x in self.df_rnaseq_.index]
@@ -203,6 +205,8 @@ class RNAseq(object):
                        for x in self.df_rnaseq_.index]
             self.df_spike_ = self.df_rnaseq_[is_spike]
             self.df_rnaseq_ = self.df_rnaseq_[is_gene]
+        else:
+            self.spike_type_ = None
 
         self._remove_all_zero()
         self._update_info()
@@ -213,10 +217,10 @@ class RNAseq(object):
         """Overview RNAseq data
         """
 
-        if self.spike_type_:
-            fig, axes = plt.subplots(2, 3, figsize=(16, 8))
-        else:
+        if self.spike_type_ is None:
             fig, axes = plt.subplots(1, 3, figsize=(16, 4))
+        else:
+            fig, axes = plt.subplots(2, 3, figsize=(16, 8))
 
         axes = axes.flatten()
 
