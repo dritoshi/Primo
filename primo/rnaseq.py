@@ -707,6 +707,65 @@ class RNAseq(object):
 
         return self
 
+    def pairplot_pca(self, output_dir, num_pc=16, coloring_gene=None):
+        """Pairplot PC scores in tSNE space
+
+        Parameters
+        ----------
+        num_pc : int
+            Number of PC to be plotted.
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+
+        """
+        if num_pc > self.df_pca_.shape[1]:
+            print("Number of PC was smaller than num_pc.")
+            num_pc = self.df_pca_.shape[1]
+
+        ncol = num_pc
+        nrow = num_pc
+
+        figw = ncol * 4
+        figh = nrow * 4
+
+        fig, axes = plt.subplots(nrow, ncol, figsize=(figw, figh))
+
+        if coloring_gene is not None:
+            color = self.df_rnaseq_scale_.ix[coloring_gene, :]
+
+        for i in range(num_pc):
+            pc_name_Y = "PC" + str(i+1)
+            Y = self.df_pca_.ix[:, pc_name_Y]
+            for j in range(num_pc):
+                pc_name_X = "PC" + str(j+1)
+                X = self.df_pca_.ix[:, pc_name_X]
+                if i == j:
+                    axes[i][j].text(0.5, 0.5, pc_name_X,
+                                    horizontalalignment="center",
+                                    verticalalignment="center",
+                                    fontsize=24)
+                    axes[i][j].axis('off')
+                else:
+                    if coloring_gene is not None:
+                        axes[i][j].scatter(X, Y, s=20, c=color,
+                                           cmap=plt.cm.jet,
+                                           edgecolors='None')
+                    else:
+                        axes[i][j].scatter(X, Y, s=20, c="black",
+                                           edgecolors='None', alpha=0.5)
+                    axes[i][j].set_xlabel(pc_name_X, fontsize=14)
+                    axes[i][j].set_ylabel(pc_name_Y, fontsize=14)
+
+        plt.tight_layout()
+
+        output_file = os.path.join(output_dir, "Pairplot_PCA.png")
+        plt.savefig(output_file)
+
+        return self
+
     def colorize_genes(self, gene_list, output_file, space="tSNE",
                        channel_list=None, coloring="scale_log",
                        plot_colorbar=False, suptitle=None):
