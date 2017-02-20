@@ -1064,13 +1064,15 @@ class RNAseq(object):
 
         return self
 
-    def colorize_label(self, output_dir):
+    def colorize_label(self, output_dir, list_color=None):
         """Colorize dots for each label on t-SNE space
 
         Parameters
         ----------
         output_dir : str
             Output directory
+        list_color : list
+            List of manually selected colors for each label
 
         Returns
         -------
@@ -1083,7 +1085,14 @@ class RNAseq(object):
         factor_label = list(set(list_label))
         factor_label.sort()
 
-        palette = cycle(sns.color_palette("hls", len(factor_label)))
+        if list_color is None:
+            palette = cycle(sns.color_palette("hls", len(factor_label)))
+        else:
+            if len(list_color) == len(factor_label):
+                palette = cycle(list_color)
+            else:
+                raise ValueError("Length of list_color must be the same "
+                                 "number of labels.")
 
         fig, ax = plt.subplots(1, 1, figsize=(5, 5))
 
