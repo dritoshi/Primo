@@ -59,13 +59,15 @@ class RNAseq(object):
         Gene expression matrix (scaled after log2 transformation)
     df_rnaseq_scale_genes_ : DataFrame
         Scaled values on genes
-    df_pca_ : DataFrame
+    df_pca_scores_ : DataFrame
         PC scores for cells
-    df_pca_genes_ : DataFrame
+    df_pca_components_ : DataFrame
+        PC components for cells
+    df_pca_scores_genes_ : DataFrame
         PC scores for genes
-    tsne_rnaseq_cells_ : DataFrame
+    tsne_rnaseq_cells_ : Numpy array
         t-SNE for cells
-    tsne_rnaseq_genes_ : DataFrame
+    tsne_rnaseq_genes_ : Numpy array
         t-SNE for genes
     df_factor_loading_ : DataFrame
         Factor loading in PCA, genes.
@@ -559,13 +561,15 @@ class RNAseq(object):
 
         return self
 
-    def pca(self, adding_factor=0.1, **kwargs):
+    def pca(self, adding_factor=0.1, used_genes='variable', **kwargs):
         """PCA
 
         Parameters
         ----------
         adding_factor : float
             Log transformation will be done after addition of adding factor
+        used_genes : str
+            Genes used for PCA. 'variable' or 'all' can be chosen .
         **kwargs
             Arbitary keyword arguments.
 
@@ -574,31 +578,56 @@ class RNAseq(object):
         self : object
             Return the instance itself
         """
+
+        if used_genes is 'variable':
+            used_genes = self.variable_genes_
+        elif used_genes is 'all':
+            used_genes = self.genes_
+        else:
+            raise ValueError("used_genes must be 'variable' or 'all'")
+
         self.df_rnaseq_log_ = np.log(self.df_rnaseq_ + adding_factor)
         self.df_rnaseq_scale_ = pd.DataFrame(
             scale(self.df_rnaseq_log_, axis=1),
             index=self.df_rnaseq_.index,
             columns=self.df_rnaseq_.columns)
 
-        tmp_pca = PCA(**kwargs).fit_transform(
-            self.df_rnaseq_scale_.ix[self.variable_genes_, :].T)
-        pc_name = ["PC" + str(i+1) for i in range(tmp_pca.shape[1])]
-        self.df_pca_ = pd.DataFrame(tmp_pca,
-                                    index=self.df_rnaseq_.columns,
-                                    columns=pc_name)
+        # PCA for cells
+        X = self.df_rnaseq_scale_.ix[used_genes, :].T
+        pca = PCA(**kwargs)
+        pca.fit(X)
+        scores = pca.transform(X)
+        components = pca.components_.T
 
+        pc_name = ["PC" + str(i+1) for i in range(scores.shape[1])]
+        self.df_pca_scores_ = pd.DataFrame(scores,
+                                           index=self.df_rnaseq_.columns,
+                                           columns=pc_name)
+
+        self.df_pca_components_ = pd.DataFrame(components,
+                                               index=used_genes,
+                                               columns=pc_name)
+
+        # PCA for genes
         self.df_rnaseq_scale_genes_ = pd.DataFrame(
             scale(self.df_rnaseq_log_, axis=0),
             index=self.df_rnaseq_.index,
             columns=self.df_rnaseq_.columns)
 
-        tmp_pca_genes = PCA(**kwargs).fit_transform(
-            self.df_rnaseq_scale_.ix[self.variable_genes_, :])
+        X_genes = self.df_rnaseq_scale_genes_.ix[used_genes, :]
+        pca_genes = PCA(**kwargs)
+        pca_genes.fit(X_genes)
+        scores_genes = pca_genes.transform(X_genes)
+        components_genes = pca_genes.components_.T
+
         pc_name_genes = ["PC" + str(i+1) for i
-                         in range(tmp_pca_genes.shape[1])]
-        self.df_pca_genes_ = pd.DataFrame(tmp_pca_genes,
-                                          index=self.variable_genes_,
-                                          columns=pc_name_genes)
+                         in range(scores_genes.shape[1])]
+        self.df_pca_scores_genes_ = pd.DataFrame(scores_genes,
+                                                 index=used_genes,
+                                                 columns=pc_name_genes)
+
+        self.df_pca_components_genes_ = pd.DataFrame(
+            components_genes, index=self.df_rnaseq_.columns, columns=pc_name)
 
         return self
 
@@ -621,9 +650,9 @@ class RNAseq(object):
 
         """
         self.tsne_rnaseq_cells_ = TSNE(**kwargs).fit_transform(
-            self.df_pca_)
+            self.df_pca_scores_)
         self.tsne_rnaseq_genes_ = TSNE(**kwargs).fit_transform(
-            self.df_pca_genes_)
+            self.df_pca_scores_genes_)
 
         if plot is True:
             fig, axes = plt.subplots(1, 2, figsize=(10, 5))
@@ -669,9 +698,9 @@ class RNAseq(object):
             Returns the instance itself.
 
         """
-        if num_pc > self.df_pca_.shape[1]:
+        if num_pc > self.df_pca_scores_.shape[1]:
             print("Number of PC was smaller than num_pc.")
-            num_pc = self.df_pca_.shape[1]
+            num_pc = self.df_pca_scores_.shape[1]
 
         ncol = 4
         nrow = np.int(np.ceil(num_pc * 1.0 / ncol))
@@ -680,7 +709,7 @@ class RNAseq(object):
         axes = axes.flatten()
 
         for i in range(num_pc):
-            color = self.df_pca_.ix[:, i].values
+            color = self.df_pca_scores_.ix[:, i].values
             title = "PC" + str(i+1)
             X = self.tsne_rnaseq_cells_[:, 0],
             Y = self.tsne_rnaseq_cells_[:, 1],
@@ -721,9 +750,9 @@ class RNAseq(object):
             Returns the instance itself.
 
         """
-        if num_pc > self.df_pca_.shape[1]:
+        if num_pc > self.df_pca_scores_.shape[1]:
             print("Number of PC was smaller than num_pc.")
-            num_pc = self.df_pca_.shape[1]
+            num_pc = self.df_pca_scores_.shape[1]
 
         ncol = num_pc
         nrow = num_pc
@@ -738,10 +767,10 @@ class RNAseq(object):
 
         for i in range(num_pc):
             pc_name_Y = "PC" + str(i+1)
-            Y = self.df_pca_.ix[:, pc_name_Y]
+            Y = self.df_pca_scores_.ix[:, pc_name_Y]
             for j in range(num_pc):
                 pc_name_X = "PC" + str(j+1)
-                X = self.df_pca_.ix[:, pc_name_X]
+                X = self.df_pca_scores_.ix[:, pc_name_X]
                 if i == j:
                     axes[i][j].text(0.5, 0.5, pc_name_X,
                                     horizontalalignment="center",
@@ -890,7 +919,7 @@ class RNAseq(object):
             Returns the instance itself
         """
 
-        X = self.df_pca_
+        X = self.df_pca_scores_
         Y = self.df_rnaseq_scale_.T
         Z = corr_inter(X, Y)
         row_name = ["PC" + str(i+1) for i in range(X.shape[1])]
@@ -1132,7 +1161,8 @@ class RNAseq(object):
 
         if hasattr(self, 'df_rnaseq_not_norm_'):
             output_file = os.path.join(output_dir, "df_count_raw.tsv")
-            self.df_rnaseq_not_norm_.astype(int).to_csv(output_file, sep="\t", index=True)
+            self.df_rnaseq_not_norm_.astype(int).to_csv(output_file,
+                                                        sep="\t", index=True)
 
         if hasattr(self, 'df_rnaseq_log_'):
             output_file = os.path.join(output_dir, "df_count_log_norm.tsv")
@@ -1142,13 +1172,13 @@ class RNAseq(object):
             output_file = os.path.join(output_dir, "df_count_scale.tsv")
             self.df_rnaseq_scale_.to_csv(output_file, sep="\t", index=True)
 
-        if hasattr(self, 'df_xxx_'):
+        if hasattr(self, 'df_pca_scores_'):
             output_file = os.path.join(output_dir, "df_pca_scores.tsv")
-            self.df_xxx_.to_csv(output_file, sep="\t", index=True)
+            self.df_pca_scores_.to_csv(output_file, sep="\t", index=True)
 
-        if hasattr(self, 'df_xxx_'):
+        if hasattr(self, 'df_pca_components_'):
             output_file = os.path.join(output_dir, "df_pca_components.tsv")
-            self.df_xxx_.to_csv(output_file, sep="\t", index=True)
+            self.df_pca_components_.to_csv(output_file, sep="\t", index=True)
 
         if hasattr(self, 'df_factor_loading_'):
             output_file = os.path.join(output_dir, "df_pca_factor_loading.tsv")
@@ -1156,10 +1186,10 @@ class RNAseq(object):
 
         if hasattr(self, 'tsne_rnaseq_cells_'):
             output_file = os.path.join(output_dir, "df_tsne.tsv")
-            df_tmp = pd.DataFrame(self.tsne_rnaseq_cells_,
-                                  index=self.df_rnaseq_scale_.index,
-                                  columns=['tSNE1', 'tSNE2'])
-            df_tmp.to_csv(output_file, sep="\t", index=True)
+            df = pd.DataFrame(self.tsne_rnaseq_cells_,
+                              index=self.df_rnaseq_scale_.index,
+                              columns=['tSNE1', 'tSNE2'])
+            df.to_csv(output_file, sep="\t", index=True)
 
         if hasattr(self, 'df_facs_'):
             output_file = os.path.join(output_dir, "df_facs.tsv")
