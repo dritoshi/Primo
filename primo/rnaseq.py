@@ -1132,7 +1132,7 @@ class RNAseq(object):
 
         if hasattr(self, 'df_rnaseq_not_norm_'):
             output_file = os.path.join(output_dir, "df_count_raw.tsv")
-            self.df_rnaseq_not_norm_.to_csv(output_file, sep="\t", index=True)
+            self.df_rnaseq_not_norm_.astype(int).to_csv(output_file, sep="\t", index=True)
 
         if hasattr(self, 'df_rnaseq_log_'):
             output_file = os.path.join(output_dir, "df_count_log_norm.tsv")
