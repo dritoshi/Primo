@@ -1116,6 +1116,57 @@ class RNAseq(object):
 
         return self
 
+    def export_dataframes(self, output_dir):
+        """Export dataframes
+
+        Parameters
+        ----------
+        output_dir : str
+            Directory where files are exported
+
+        Return
+        ------
+        self : object
+            Returns the instance itself
+        """
+
+        if hasattr(self, 'df_rnaseq_not_norm_'):
+            output_file = os.path.join(output_dir, "df_count_raw.tsv")
+            self.df_rnaseq_not_norm_.to_csv(output_file, sep="\t", index=True)
+
+        if hasattr(self, 'df_rnaseq_log_'):
+            output_file = os.path.join(output_dir, "df_count_log_norm.tsv")
+            self.df_rnaseq_log_.to_csv(output_file, sep="\t", index=True)
+
+        if hasattr(self, 'df_rnaseq_scale_'):
+            output_file = os.path.join(output_dir, "df_count_scale.tsv")
+            self.df_rnaseq_scale_.to_csv(output_file, sep="\t", index=True)
+
+        if hasattr(self, 'df_xxx_'):
+            output_file = os.path.join(output_dir, "df_pca_scores.tsv")
+            self.df_xxx_.to_csv(output_file, sep="\t", index=True)
+
+        if hasattr(self, 'df_xxx_'):
+            output_file = os.path.join(output_dir, "df_pca_components.tsv")
+            self.df_xxx_.to_csv(output_file, sep="\t", index=True)
+
+        if hasattr(self, 'df_factor_loading_'):
+            output_file = os.path.join(output_dir, "df_pca_factor_loading.tsv")
+            self.df_factor_loading_.to_csv(output_file, sep="\t", index=True)
+
+        if hasattr(self, 'tsne_rnaseq_cells_'):
+            output_file = os.path.join(output_dir, "df_tsne.tsv")
+            df_tmp = pd.DataFrame(self.tsne_rnaseq_cells_,
+                                  index=self.df_rnaseq_scale_.index,
+                                  columns=['tSNE1', 'tSNE2'])
+            df_tmp.to_csv(output_file, sep="\t", index=True)
+
+        if hasattr(self, 'df_facs_'):
+            output_file = os.path.join(output_dir, "df_facs.tsv")
+            self.df_facs_.to_csv(output_file, sep="\t", index=True)
+
+        return self
+
     def _remove_all_zero(self):
         genes_not_all_zero = (self.df_rnaseq_.sum(axis=1) != 0)
         cells_not_all_zero = (self.df_rnaseq_.sum(axis=0) != 0)
