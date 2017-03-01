@@ -65,9 +65,9 @@ class RNAseq(object):
         PC components for cells
     df_pca_scores_genes_ : DataFrame
         PC scores for genes
-    tsne_rnaseq_cells_ : Numpy array
+    df_tsne_rnaseq_cells_ : DataFrame
         t-SNE for cells
-    tsne_rnaseq_genes_ : Numpy array
+    df_tsne_rnaseq_genes_ : DataFrame
         t-SNE for genes
     df_factor_loading_ : DataFrame
         Factor loading in PCA, genes.
@@ -631,7 +631,7 @@ class RNAseq(object):
 
         return self
 
-    def tsne(self, plot=False, output_dir=None, **kwargs):
+    def tsne(self, plot=False, output_dir=None, additional=None, **kwargs):
         """t-SNE
 
         Parameters
@@ -640,6 +640,8 @@ class RNAseq(object):
             if `True`, export PNG file
         output_dir : :obj:`str`, optional
             if plot is `True`, export PNG file to this directory
+        additional : str
+            if tSNE for genes are needed, set "gene".
         **kwargs
             Arbitary keyword arguments.
 
@@ -647,36 +649,51 @@ class RNAseq(object):
         ------
         self : object
             Returns the instance itself
-
         """
-        self.tsne_rnaseq_cells_ = TSNE(**kwargs).fit_transform(
-            self.df_pca_scores_)
-        self.tsne_rnaseq_genes_ = TSNE(**kwargs).fit_transform(
-            self.df_pca_scores_genes_)
+
+        X = TSNE(**kwargs).fit_transform(self.df_pca_scores_)
+        self.df_tsne_rnaseq_cells_ = pd.DataFrame(
+            X, index=self.df_pca_scores_.index, columns=['Dim1', 'Dim2'])
+
+        if additional == "gene":
+            X_genes = TSNE(**kwargs).fit_transform(self.df_pca_scores_genes_)
+            self.df_tsne_rnaseq_genes_ = pd.DataFrame(
+                X_genes, index=self.df_pca_scores_genes_.index,
+                columns=['Dim1', 'Dim2'])
 
         if plot is True:
             fig, axes = plt.subplots(1, 2, figsize=(10, 5))
             axes = axes.flatten()
 
-            for i in range(2):
-                axes[i].set_xlabel("Dim1", fontsize=14)
-                axes[i].set_ylabel("Dim2", fontsize=14)
-                axes[i].set_xticks([])
-                axes[i].set_yticks([])
+            axes[0].set_xlabel("Dim1", fontsize=14)
+            axes[0].set_ylabel("Dim2", fontsize=14)
+            axes[0].set_xticks([])
+            axes[0].set_yticks([])
 
-            axes[0].scatter(self.tsne_rnaseq_cells_[:, 0],
-                            self.tsne_rnaseq_cells_[:, 1],
+            axes[0].scatter(self.df_tsne_rnaseq_cells_.iloc[:, 0],
+                            self.df_tsne_rnaseq_cells_.iloc[:, 1],
                             c="black",
-                            s=20,
-                            edgecolor='None')
-            axes[1].scatter(self.tsne_rnaseq_genes_[:, 0],
-                            self.tsne_rnaseq_genes_[:, 1],
-                            c="black",
+                            alpha=0.5,
                             s=20,
                             edgecolor='None')
 
             axes[0].set_title("t-SNE: cells", fontsize=24)
-            axes[1].set_title("t-SNE: genes", fontsize=24)
+
+            if additional == "gene":
+                axes[1].set_xlabel("Dim1", fontsize=14)
+                axes[1].set_ylabel("Dim2", fontsize=14)
+                axes[1].set_xticks([])
+                axes[1].set_yticks([])
+                axes[1].scatter(self.df_tsne_rnaseq_genes_.iloc[:, 0],
+                                self.df_tsne_rnaseq_genes_.iloc[:, 1],
+                                c="black",
+                                alpha=0.5,
+                                s=20,
+                                edgecolor='None')
+                axes[1].set_title("t-SNE: genes", fontsize=24)
+            else:
+                axes[1].set_xticks([])
+                axes[1].set_yticks([])
 
             plt.tight_layout()
             output_file = os.path.join(output_dir, "tSNE.png")
@@ -711,8 +728,8 @@ class RNAseq(object):
         for i in range(num_pc):
             color = self.df_pca_scores_.ix[:, i].values
             title = "PC" + str(i+1)
-            X = self.tsne_rnaseq_cells_[:, 0],
-            Y = self.tsne_rnaseq_cells_[:, 1],
+            X = self.df_tsne_rnaseq_cells_.iloc[:, 0],
+            Y = self.df_tsne_rnaseq_cells_.iloc[:, 1],
             axes[i].set_xlabel("Dim1", fontsize=14)
             axes[i].set_ylabel("Dim2", fontsize=14)
             axes[i].set_xticks([])
@@ -862,8 +879,8 @@ class RNAseq(object):
                           "scale_log, raw_count or normalized_count.")
 
                 if space == "tSNE":
-                    X = self.tsne_rnaseq_cells_[:, 0]
-                    Y = self.tsne_rnaseq_cells_[:, 1]
+                    X = self.df_tsne_rnaseq_cells_.iloc[:, 0]
+                    Y = self.df_tsne_rnaseq_cells_.iloc[:, 1]
                     axes[i].set_xlabel("Dim1", fontsize=14)
                     axes[i].set_ylabel("Dim2", fontsize=14)
                     axes[i].set_xticks([])
@@ -1050,8 +1067,8 @@ class RNAseq(object):
 
         for i, channel in enumerate(channel_list):
 
-            X = self.tsne_rnaseq_cells_[:, 0]
-            Y = self.tsne_rnaseq_cells_[:, 1]
+            X = self.df_tsne_rnaseq_cells_.iloc[:, 0]
+            Y = self.df_tsne_rnaseq_cells_.iloc[:, 1]
             axes[i].set_xlabel("Dim1", fontsize=14)
             axes[i].set_ylabel("Dim2", fontsize=14)
             axes[i].set_xticks([])
@@ -1132,8 +1149,8 @@ class RNAseq(object):
 
         for i, label in enumerate(factor_label):
             cell = np.where(series_label == label)
-            X = self.tsne_rnaseq_cells_[cell, 0]
-            Y = self.tsne_rnaseq_cells_[cell, 1]
+            X = self.df_tsne_rnaseq_cells_.iloc[cell, 0]
+            Y = self.df_tsne_rnaseq_cells_.iloc[cell, 1]
             c = next(palette)
             ax.scatter(X, Y, c=c, s=5,
                        edgecolors='None', label=label)
@@ -1184,12 +1201,10 @@ class RNAseq(object):
             output_file = os.path.join(output_dir, "df_pca_factor_loading.tsv")
             self.df_factor_loading_.to_csv(output_file, sep="\t", index=True)
 
-        if hasattr(self, 'tsne_rnaseq_cells_'):
+        if hasattr(self, 'df_tsne_rnaseq_cells_'):
             output_file = os.path.join(output_dir, "df_tsne.tsv")
-            df = pd.DataFrame(self.tsne_rnaseq_cells_,
-                              index=self.df_rnaseq_scale_.index,
-                              columns=['tSNE1', 'tSNE2'])
-            df.to_csv(output_file, sep="\t", index=True)
+            self.df_tsne_rnaseq_cells_.to_csv(output_file,
+                                              sep="\t", index=True)
 
         if hasattr(self, 'df_facs_'):
             output_file = os.path.join(output_dir, "df_facs.tsv")
