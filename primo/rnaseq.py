@@ -16,10 +16,10 @@ from scipy.stats import entropy
 import seaborn as sns
 sns.set_style("white")
 
-
 from sklearn.preprocessing import scale
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+from sklearn.cluster import DBSCAN
 
 # from .utils import plot_tsne
 
@@ -69,6 +69,8 @@ class RNAseq(object):
         t-SNE for cells
     df_tsne_rnaseq_genes_ : DataFrame
         t-SNE for genes
+    cluster_label_ : list
+        resulted list of clustering
     df_factor_loading_ : DataFrame
         Factor loading in PCA, genes.
     df_facs_ : DataFrame
@@ -1110,13 +1112,37 @@ class RNAseq(object):
 
         return self
 
-    def colorize_label(self, output_dir, list_color=None):
+    def clustering(self, **kwargs):
+        """Clustering cells using DBSCAN
+
+        Parameters
+        ----------
+        **kwargs
+            Arbitary keyword arguments.
+
+        Returns
+        -------
+        self : object
+            Returns the instance itself.
+        """
+
+        X = self.df_tsne_rnaseq_cells_
+
+        dbscan = DBSCAN(**kwargs)
+
+        self.cluster_label_ = dbscan.fit_predict(X)
+
+        return self
+
+    def colorize_label(self, output_dir, label="sample", list_color=None):
         """Colorize dots for each label on t-SNE space
 
         Parameters
         ----------
         output_dir : str
             Output directory
+        label : str
+            Label used for coloring. "sample" or "cluster" can be selected.
         list_color : list
             List of manually selected colors for each label
 
@@ -1126,10 +1152,24 @@ class RNAseq(object):
             Returns the instance itself.
         """
 
-        list_label = [x.split("_label:")[1] for x in self.df_rnaseq_.columns]
+        if label == "sample":
+            list_label = [x.split("_label:")[1] for x
+                          in self.df_rnaseq_.columns]
+            output_file = os.path.join(output_dir, "tSNE_label_sample.png")
+        elif label == "cluster":
+            list_label = self.cluster_label_
+            output_file = os.path.join(output_dir, "tSNE_label_label.png")
+        else:
+            raise ValueError("Option 'label' must be 'sample' or 'cluster'.")
+
         series_label = pd.Series(list_label)
         factor_label = list(set(list_label))
         factor_label.sort()
+
+        if label == "cluster":
+            list_label = ["cluster" + str(i+1) for i in list_label]
+            series_label = pd.Series(list_label)
+            factor_label = ["cluster" + str(i+1) for i in factor_label]
 
         if list_color is None:
             palette = cycle(sns.color_palette("hls", len(factor_label)))
@@ -1152,12 +1192,17 @@ class RNAseq(object):
             X = self.df_tsne_rnaseq_cells_.iloc[cell.values, 0]
             Y = self.df_tsne_rnaseq_cells_.iloc[cell.values, 1]
             c = next(palette)
+
+            if label == "cluster0":
+                label = "noise"
+                c = "lightgray"
+
             ax.scatter(X, Y, c=c, s=5,
                        edgecolors='None', label=label)
+
         plt.legend(markerscale=3.0, bbox_to_anchor=(1.05, 1),
                    loc=2, borderaxespad=0.)
 
-        output_file = os.path.join(output_dir, "tSNE_label.png")
         plt.savefig(output_file)
 
         return self
