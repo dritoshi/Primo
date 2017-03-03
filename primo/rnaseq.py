@@ -1148,9 +1148,9 @@ class RNAseq(object):
         ax.set_yticks([])
 
         for i, label in enumerate(factor_label):
-            cell = np.where(series_label == label)
-            X = self.df_tsne_rnaseq_cells_.iloc[cell, 0]
-            Y = self.df_tsne_rnaseq_cells_.iloc[cell, 1]
+            cell = (series_label == label)
+            X = self.df_tsne_rnaseq_cells_.iloc[cell.values, 0]
+            Y = self.df_tsne_rnaseq_cells_.iloc[cell.values, 1]
             c = next(palette)
             ax.scatter(X, Y, c=c, s=5,
                        edgecolors='None', label=label)
