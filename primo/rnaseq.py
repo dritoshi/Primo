@@ -8,10 +8,11 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import os
 from distutils.version import StrictVersion
 from itertools import cycle
+import multiprocessing as mp
 
 import pandas as pd
 import numpy as np
-from scipy.stats import entropy
+from scipy.stats import entropy, chi2
 
 import seaborn as sns
 sns.set_style("white")
@@ -20,6 +21,10 @@ from sklearn.preprocessing import scale
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.cluster import DBSCAN
+
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+from statsmodels.sandbox.stats.multicomp import fdrcorrection0
 
 # from .utils import plot_tsne
 
@@ -1207,6 +1212,137 @@ class RNAseq(object):
 
         return self
 
+    def calc_markers(self, psuedo_count=1, mean_diff=2.0, fdr=0.05,
+                     num_core=18, random_state=12345):
+        """Calculate marker genes for clusters
+
+        Parameters
+        ----------
+
+        Return
+        ------
+        self : object
+            Returns the instance itself.
+        """
+
+        factor_label = list(set(self.cluster_label_))
+        factor_label.sort()
+
+        dict_deg = dict()
+        marker_genes = []
+
+        for i, cluster_i in enumerate(factor_label):
+            if cluster_i == -1:
+                continue
+            for j, cluster_j in enumerate(factor_label):
+                if cluster_j == -1:
+                    continue
+                if i < j:
+                    res_df = self._compare_two_clusters(
+                        cluster_i, cluster_j, psuedo_count, mean_diff,
+                        fdr, num_core, random_state)
+                    dict_deg[(cluster_i + 1, cluster_j + 1)] = res_df
+                    marker_genes.extend(list(res_df.index))
+
+        marker_genes = list(set(marker_genes))
+
+        self.dict_deg = dict_deg
+
+        self.markers = marker_genes
+
+        return self
+
+    def _compare_two_clusters(self, cluster_1, cluster_2, psuedo_count,
+                              mean_diff, fdr, num_core, random_state):
+
+        series_label = pd.Series(self.cluster_label_)
+        bool_cell_1 = list(series_label == cluster_1)
+        bool_cell_2 = list(series_label == cluster_2)
+
+        df = self.df_rnaseq_not_norm_
+        df_1 = df.iloc[:, bool_cell_1]
+        df_2 = df.iloc[:, bool_cell_2]
+        use_gene_1 = df.index[
+            (df_1.mean(axis=1) / (psuedo_count + df_2.mean(axis=1)) >
+             mean_diff)]
+        use_gene_2 = df.index[
+            (df_2.mean(axis=1) / (psuedo_count + df_1.mean(axis=1)) >
+             mean_diff)]
+        use_gene = list(use_gene_1) + list(use_gene_2)
+
+        if len(use_gene) == 0:
+            res_df = pd.DataFrame()
+            return res_df
+
+        def select_100cells(df, random_state):
+            if df.shape[1] > 100:
+                random_state = np.random.RandomState(random_state)
+                cell = random_state.choice(range(df.shape[1]),
+                                           size=100, replace=False)
+                df = df.ix[:, cell]
+            return df
+
+        df_1 = select_100cells(df_1, random_state)
+        df_2 = select_100cells(df_2, random_state)
+
+        def worker(genes, out_q):
+            df_delta = pd.DataFrame()
+
+            for gene in genes:
+                x = np.round(self._binom_one_gene(df_1, df_2, gene), 2)
+                df_delta.loc[gene, 'delta'] = x
+            out_q.put(df_delta)
+
+        chunk = np.int(np.ceil(len(use_gene) / num_core))
+        genes_sep = [use_gene[i:i+chunk] for i
+                     in range(0, len(use_gene), chunk)]
+
+        out_q = mp.Queue()
+        jobs = []
+
+        for genes in genes_sep:
+            p = mp.Process(target=worker, args=(genes, out_q))
+            jobs.append(p)
+            p.start()
+
+        res_df = pd.DataFrame()
+        for i in range(len(genes_sep)):
+            res_df = res_df.append(out_q.get())
+
+        [job.join() for job in jobs]
+
+        res_df = res_df.loc[use_gene, :]
+        mean_df_1 = self.df_rnaseq_.iloc[:, bool_cell_1].mean(axis=1)
+        mean_df_2 = self.df_rnaseq_.iloc[:, bool_cell_2].mean(axis=1)
+        res_df['mean_cluster' + str(cluster_1 + 1)] = mean_df_1
+        res_df['mean_cluster' + str(cluster_2 + 1)] = mean_df_2
+        res_df['FC'] = mean_df_1 / mean_df_2
+
+        p_val = 1 - chi2.cdf(res_df['delta'], df=1)
+        q_val = fdrcorrection0(p_val)[1]
+        res_df['p_value'] = np.round(p_val, 4)
+        res_df['q_value'] = np.round(q_val, 4)
+
+        res_df = res_df[res_df.q_value < fdr]
+        res_df = res_df.sort_values(by="FC", ascending=False)
+
+        return res_df
+
+    def _binom_one_gene(self, df_1, df_2, gene):
+        df_1 = formatting(df_1, "A", gene)
+        df_2 = formatting(df_2, "B", gene)
+        df = pd.concat([df_1, df_2], axis=0)
+        df.index = range(len(df))
+        df['count_not'] = df['count_total'] - df['count_gene']
+
+        dev_null = calc_deviance(
+            formula='count_gene + count_not ~ 1', df=df)
+        dev = calc_deviance(
+            formula='count_gene + count_not ~ 1 + C(condition)', df=df)
+        delta = dev_null - dev
+
+        return delta
+
     def export_dataframes(self, output_dir):
         """Export dataframes
 
@@ -1279,6 +1415,19 @@ def corr_inter(X, Y):
     Y_normed = (Y - Y.mean(axis=0)) / Y.std(axis=0, ddof=0)
     return np.dot(X_normed.T, Y_normed) / X.shape[0]
 
+
+def formatting(df, condition, gene):
+    df_new = pd.DataFrame()
+    df_new['count_gene'] = df.loc[gene]
+    df_new['condition'] = str(condition)
+    df_new['count_total'] = df.sum()
+    return df_new
+
+
+def calc_deviance(formula, df):
+    model = smf.glm(formula, df, family=sm.families.Binomial())
+    result = model.fit()
+    return result.deviance
 
 # def concatenate_rnaseq_instance(list_rnaseq, list_label):
 #    """Concatenate primo.rnaseq instance
