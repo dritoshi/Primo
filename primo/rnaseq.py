@@ -1136,6 +1136,7 @@ class RNAseq(object):
         dbscan = DBSCAN(**kwargs)
 
         self.cluster_label_ = dbscan.fit_predict(X)
+        self.cluster_label_ += 1
 
         return self
 
@@ -1158,23 +1159,27 @@ class RNAseq(object):
         """
 
         if label == "sample":
+            self.used_color_sample_ = dict()
+            used_color = self.used_color_sample_
             list_label = [x.split("_label:")[1] for x
                           in self.df_rnaseq_.columns]
-            output_file = os.path.join(output_dir, "tSNE_label_sample.png")
         elif label == "cluster":
+            self.used_color_cluster_ = dict()
+            used_color = self.used_color_cluster_
             list_label = self.cluster_label_
-            output_file = os.path.join(output_dir, "tSNE_label_label.png")
         else:
             raise ValueError("Option 'label' must be 'sample' or 'cluster'.")
+
+        output_file = os.path.join(output_dir, "tSNE_" + label + ".png")
 
         series_label = pd.Series(list_label)
         factor_label = list(set(list_label))
         factor_label.sort()
 
-        if label == "cluster":
-            list_label = ["cluster" + str(i+1) for i in list_label]
-            series_label = pd.Series(list_label)
-            factor_label = ["cluster" + str(i+1) for i in factor_label]
+#         if label == "cluster":
+#             list_label = ["cluster" + str(i) for i in list_label]
+#             series_label = pd.Series(list_label)
+#             factor_label = ["cluster" + str(i) for i in factor_label]
 
         if list_color is None:
             palette = cycle(sns.color_palette("hls", len(factor_label)))
@@ -1192,22 +1197,107 @@ class RNAseq(object):
         ax.set_xticks([])
         ax.set_yticks([])
 
-        for i, label in enumerate(factor_label):
-            cell = (series_label == label)
+        for i, lbl in enumerate(factor_label):
+
+            cell = (series_label == lbl)
             X = self.df_tsne_rnaseq_cells_.iloc[cell.values, 0]
             Y = self.df_tsne_rnaseq_cells_.iloc[cell.values, 1]
-            c = next(palette)
 
-            if label == "cluster0":
-                label = "noise"
+            if (label == "cluster") & (lbl == 0):
                 c = "lightgray"
+            else:
+                c = next(palette)
+
+            used_color[lbl] = c
 
             ax.scatter(X, Y, c=c, s=5,
-                       edgecolors='None', label=label)
+                       edgecolors='None', label=lbl)
 
         plt.legend(markerscale=3.0, bbox_to_anchor=(1.05, 1),
-                   loc=2, borderaxespad=0.)
+                   loc=2, borderaxespad=0., title=label)
 
+        plt.savefig(output_file)
+
+        if label == "sample":
+            self.used_color_sample_ = used_color
+        elif label == "cluster":
+            self.used_color_cluster_ = used_color
+
+        return self
+
+    def violinplot(self, output_dir, gene_list, count="normalized",
+                   label="sample", remove_label=None):
+        """Violinplots for genes
+
+        Parameters
+        ----------
+        output_dir : str
+            Output directory
+        gene_list : list
+            List of genes
+        label : str
+            Label used for coloring. "sample" or "cluster" can be selected.
+        remove_label : list
+            list of labels to be removed for plots.
+
+        Returns
+        -------
+        self : object
+            Returns the instance itself.
+        """
+
+        if count == "normalized":
+            df = self.df_rnaseq_.T
+        elif count == "raw":
+            df = self.df_rnaseq_not_norm_.T
+        else:
+            raise ValueError("Option 'count' must be 'normalized' or 'raw'.")
+
+        if label == "sample":
+            label_name = "Sample name"
+            list_label = [x.split("_label:")[1] for x
+                          in df.index]
+            color_dict = self.used_color_sample_
+        elif label == "cluster":
+            label_name = "Cluster name"
+            list_label = self.cluster_label_
+            color_dict = self.used_color_cluster_
+        else:
+            raise ValueError("Option 'label' must be 'sample' or 'cluster'.")
+
+        df[label] = list_label
+        output_file = os.path.join(output_dir, "violinplot_" + label + ".png")
+
+        if remove_label is not None:
+            factor_label = list(set(list_label) - set(remove_label))
+        factor_label.sort()
+
+        if remove_label is not None:
+            df = df[df[label].isin(factor_label)]
+
+        palette = [color_dict[l] for l in factor_label]
+
+        ncol = 4
+        nrow = np.int(np.ceil(len(gene_list) * 1.0 / ncol))
+        figh = nrow * 4
+        figw = ncol * (len(set(list_label)) - len(remove_label))
+
+        fig, axes = plt.subplots(nrow, ncol, figsize=(figw, figh))
+        axes = axes.flatten()
+
+        for i, gene in enumerate(gene_list):
+            sns.violinplot(x="cluster", y=gene, data=df, scale="width",
+                           linewidth=1, palette=palette, ax=axes[i])
+            axes[i].set_ylim(0,)
+            axes[i].set_title(gene, fontsize="24")
+            axes[i].set_xlabel(label_name)
+            axes[i].set_ylabel("Count")
+
+        for i in range(len(gene_list), len(axes)):
+            if i >= ncol:
+                fig.delaxes(axes[i])
+
+        plt.tight_layout()
         plt.savefig(output_file)
 
         return self
