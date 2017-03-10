@@ -8,6 +8,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import os
 from distutils.version import StrictVersion
 from itertools import cycle
+from collections import Counter
 import multiprocessing as mp
 
 import pandas as pd
@@ -1176,6 +1177,10 @@ class RNAseq(object):
         factor_label = list(set(list_label))
         factor_label.sort()
 
+        counter = Counter(list_label)
+        counter = pd.Series(counter)
+        counter = counter.to_dict()
+
 #         if label == "cluster":
 #             list_label = ["cluster" + str(i) for i in list_label]
 #             series_label = pd.Series(list_label)
@@ -1210,8 +1215,9 @@ class RNAseq(object):
 
             used_color[lbl] = c
 
+            legend_name = str(lbl) + " (" + str(counter[lbl]) + ")"
             ax.scatter(X, Y, c=c, s=5,
-                       edgecolors='None', label=lbl)
+                       edgecolors='None', label=legend_name)
 
         plt.legend(markerscale=3.0, bbox_to_anchor=(1.05, 1),
                    loc=2, borderaxespad=0., title=label)
@@ -1226,7 +1232,7 @@ class RNAseq(object):
         return self
 
     def violinplot(self, output_dir, gene_list, count="normalized",
-                   label="sample", remove_label=None):
+                   label="sample", remove_label=[]):
         """Violinplots for genes
 
         Parameters
@@ -1268,19 +1274,18 @@ class RNAseq(object):
         df[label] = list_label
         output_file = os.path.join(output_dir, "violinplot_" + label + ".png")
 
-        if remove_label is not None:
-            factor_label = list(set(list_label) - set(remove_label))
+        factor_label = list(set(list_label) - set(remove_label))
+
         factor_label.sort()
 
-        if remove_label is not None:
-            df = df[df[label].isin(factor_label)]
+        df = df[df[label].isin(factor_label)]
 
         palette = [color_dict[l] for l in factor_label]
 
         ncol = 4
         nrow = np.int(np.ceil(len(gene_list) * 1.0 / ncol))
         figh = nrow * 4
-        figw = ncol * (len(set(list_label)) - len(remove_label))
+        figw = ncol * len(factor_label)
 
         fig, axes = plt.subplots(nrow, ncol, figsize=(figw, figh))
         axes = axes.flatten()
