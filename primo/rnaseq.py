@@ -1290,6 +1290,13 @@ class RNAseq(object):
             df['transcripts'] = detected_transcripts
             df['genes'] = detected_genes
 
+            gene_mito = [x for x in self.genes_ if x.startswith("mt-")]
+            mito_transcripts = (self.df_rnaseq_not_norm_.
+                                ix[gene_mito, df.index].sum())
+            mito_ratio = mito_transcripts / detected_transcripts
+            df['mt-genes transcripts'] = mito_transcripts
+            df['mt-genes ratio'] = mito_ratio
+
             ncol = 4
             nrow = 1
             figh = nrow * 4
@@ -1298,16 +1305,19 @@ class RNAseq(object):
             fig, axes = plt.subplots(nrow, ncol, figsize=(figw, figh))
             axes = axes.flatten()
 
-            for i, detect in enumerate(['transcripts', 'genes']):
-                sns.violinplot(x=label, y=detect, data=df, scale="width",
+            for i, column in enumerate(['transcripts', 'genes',
+                                        'mt-genes transcripts',
+                                        'mt-genes ratio']):
+                sns.violinplot(x=label, y=column, data=df, scale="width",
                                linewidth=1, palette=palette, ax=axes[i])
                 axes[i].set_ylim(0,)
-                axes[i].set_title("Detected_" + detect, fontsize="18")
+                axes[i].set_title(column, fontsize="18")
                 axes[i].set_xlabel(label_name)
-                axes[i].set_ylabel("Number")
 
-            for i in range(2, 4):
-                fig.delaxes(axes[i])
+                if i == 3:
+                    axes[i].set_ylabel("Ratio")
+                else:
+                    axes[i].set_ylabel("Number")
 
         else:
             ncol = 4
