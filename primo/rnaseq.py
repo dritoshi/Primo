@@ -1231,7 +1231,7 @@ class RNAseq(object):
 
         return self
 
-    def violinplot(self, output_dir, gene_list, count="normalized",
+    def violinplot(self, output_dir, gene_list=[], count="normalized",
                    label="sample", remove_label=[]):
         """Violinplots for genes
 
@@ -1282,25 +1282,53 @@ class RNAseq(object):
 
         palette = [color_dict[l] for l in factor_label]
 
-        ncol = 4
-        nrow = np.int(np.ceil(len(gene_list) * 1.0 / ncol))
-        figh = nrow * 4
-        figw = ncol * len(factor_label)
+        if len(gene_list) == 0:
+            detected_transcripts = (self.df_rnaseq_not_norm_.
+                                    loc[:, df.index].sum())
+            detected_genes = (self.df_rnaseq_not_norm_.
+                              loc[:, df.index] > 0).sum()
+            df['transcripts'] = detected_transcripts
+            df['genes'] = detected_genes
 
-        fig, axes = plt.subplots(nrow, ncol, figsize=(figw, figh))
-        axes = axes.flatten()
+            ncol = 4
+            nrow = 1
+            figh = nrow * 4
+            figw = ncol * 4 + len(factor_label) * 0.5
 
-        for i, gene in enumerate(gene_list):
-            sns.violinplot(x="cluster", y=gene, data=df, scale="width",
-                           linewidth=1, palette=palette, ax=axes[i])
-            axes[i].set_ylim(0,)
-            axes[i].set_title(gene, fontsize="24")
-            axes[i].set_xlabel(label_name)
-            axes[i].set_ylabel("Count")
+            fig, axes = plt.subplots(nrow, ncol, figsize=(figw, figh))
+            axes = axes.flatten()
 
-        for i in range(len(gene_list), len(axes)):
-            if i >= ncol:
+            for i, detect in enumerate(['transcripts', 'genes']):
+                sns.violinplot(x=label, y=detect, data=df, scale="width",
+                               linewidth=1, palette=palette, ax=axes[i])
+                axes[i].set_ylim(0,)
+                axes[i].set_title("Detected_" + detect, fontsize="18")
+                axes[i].set_xlabel(label_name)
+                axes[i].set_ylabel("Number")
+
+            for i in range(2, 4):
                 fig.delaxes(axes[i])
+
+        else:
+            ncol = 4
+            nrow = np.int(np.ceil(len(gene_list) * 1.0 / ncol))
+            figh = nrow * 4
+            figw = ncol * 4 + len(factor_label) * 0.5
+
+            fig, axes = plt.subplots(nrow, ncol, figsize=(figw, figh))
+            axes = axes.flatten()
+
+            for i, gene in enumerate(gene_list):
+                sns.violinplot(x=label, y=gene, data=df, scale="width",
+                               linewidth=1, palette=palette, ax=axes[i])
+                axes[i].set_ylim(0,)
+                axes[i].set_title(gene, fontsize="24")
+                axes[i].set_xlabel(label_name)
+                axes[i].set_ylabel("Count")
+
+            for i in range(len(gene_list), len(axes)):
+                if i >= ncol:
+                    fig.delaxes(axes[i])
 
         plt.tight_layout()
         plt.savefig(output_file)
@@ -1308,7 +1336,7 @@ class RNAseq(object):
         return self
 
     def calc_markers(self, psuedo_count=1, mean_diff=2.0, fdr=0.05,
-                     num_core=18, random_state=12345):
+                     num_core=16, random_state=12345):
         """Calculate marker genes for clusters
 
         Parameters
@@ -1327,16 +1355,16 @@ class RNAseq(object):
         marker_genes = []
 
         for i, cluster_i in enumerate(factor_label):
-            if cluster_i == -1:
+            if cluster_i == 0:
                 continue
             for j, cluster_j in enumerate(factor_label):
-                if cluster_j == -1:
+                if cluster_j == 0:
                     continue
                 if i < j:
                     res_df = self._compare_two_clusters(
                         cluster_i, cluster_j, psuedo_count, mean_diff,
                         fdr, num_core, random_state)
-                    dict_deg[(cluster_i + 1, cluster_j + 1)] = res_df
+                    dict_deg[(cluster_i, cluster_j)] = res_df
                     marker_genes.extend(list(res_df.index))
 
         marker_genes = list(set(marker_genes))
@@ -1407,10 +1435,10 @@ class RNAseq(object):
         [job.join() for job in jobs]
 
         res_df = res_df.loc[use_gene, :]
-        mean_df_1 = self.df_rnaseq_.iloc[:, bool_cell_1].mean(axis=1)
-        mean_df_2 = self.df_rnaseq_.iloc[:, bool_cell_2].mean(axis=1)
-        res_df['mean_cluster' + str(cluster_1 + 1)] = mean_df_1
-        res_df['mean_cluster' + str(cluster_2 + 1)] = mean_df_2
+        mean_df_1 = self.df_rnaseq_.ix[use_gene, bool_cell_1].mean(axis=1)
+        mean_df_2 = self.df_rnaseq_.ix[use_gene, bool_cell_2].mean(axis=1)
+        res_df['mean_cluster' + str(cluster_1)] = mean_df_1
+        res_df['mean_cluster' + str(cluster_2)] = mean_df_2
         res_df['FC'] = mean_df_1 / mean_df_2
 
         p_val = 1 - chi2.cdf(res_df['delta'], df=1)
