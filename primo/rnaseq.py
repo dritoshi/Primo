@@ -1139,6 +1139,13 @@ class RNAseq(object):
         self.cluster_label_ = dbscan.fit_predict(X)
         self.cluster_label_ += 1
 
+        self.cells_in_cluster_ = dict()
+
+        for lbl in sorted(list(set(self.cluster_label_))):
+            cell = (self.cluster_label_ == lbl)
+            self.cells_in_cluster_[lbl] = list(
+                self.df_tsne_rnaseq_cells_.index[cell])
+
         return self
 
     def colorize_label(self, output_dir, label="sample", list_color=None):
