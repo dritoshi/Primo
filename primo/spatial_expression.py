@@ -94,13 +94,15 @@ class SpatialExpression(object):
         self.pixel_names_ = list(Y.columns)
 
         self.pixel_ = np.int(np.sqrt(Y.shape[1]))
+        self.pixel_v_ = self.w_obj_.pixel_v_
+        self.pixel_h_ = self.w_obj_.pixel_h_
 
         self.spatial_ = np.dot(X, Y) / np.array(self.p_obj_.mean_position_)
         self.spatial_ = np.nan_to_num(self.spatial_)
         self.spatial_ = (self.spatial_.T / self.spatial_.sum(axis=1)).T
 
         self.spatial_images_ = [self.spatial_[i].reshape(
-            self.pixel_, self.pixel_)
+            self.pixel_v_, self.pixel_h_)
                                 for i in range(self.spatial_.shape[0])]
 
         self.spatial_ = pd.DataFrame(self.spatial_,
@@ -190,7 +192,7 @@ class SpatialExpression(object):
             spatial = np.dot(X, Y) / np.array(Y_mean)
             spatial = np.nan_to_num(spatial)
             spatial = spatial / spatial.sum()
-            spatial_image = spatial.reshape(self.pixel_, self.pixel_)
+            spatial_image = spatial.reshape(self.pixel_v_, self.pixel_h_)
 
             self.spatial_loocv_.append(spatial)
             self.spatial_loocv_images_.append(spatial_image)
@@ -231,13 +233,13 @@ class SpatialExpression(object):
             im3 = self.spatial_loocv_images_[i]
 
             axes[i * 3 + 0].imshow(im1, cmap=plt.cm.Purples)
-            axes[i * 3 + 0].set_title(gene + " : original", fontsize=10)
+            axes[i * 3 + 0].set_title(gene + "\noriginal", fontsize=8)
 
             axes[i * 3 + 1].imshow(im2, cmap=cmap)
-            axes[i * 3 + 1].set_title(gene + " : inference", fontsize=10)
+            axes[i * 3 + 1].set_title(gene + "\ninference", fontsize=8)
 
             axes[i * 3 + 2].imshow(im3, cmap=cmap)
-            axes[i * 3 + 2].set_title(gene + " : loocv", fontsize=10)
+            axes[i * 3 + 2].set_title(gene + "\nloocv", fontsize=8)
 
         for ax in axes:
             ax.axis('off')
@@ -504,11 +506,11 @@ class SpatialExpression(object):
     def _plot_clusters_image(self, ax, cmap, mirror=True):
 
         im = np.array(self.df_cluster_).reshape(
-            self.w_obj_.pixel_, self.w_obj_.pixel_)
+            self.w_obj_.pixel_v_, self.w_obj_.pixel_h_)
 
         if mirror:
-            im_left = im[:, :int(self.w_obj_.pixel_ / 2)]
-            im[:, int(self.w_obj_.pixel_ / 2):] = im_left[:, ::-1]
+            im_left = im[:, :int(self.w_obj_.pixel_h_ / 2)]
+            im[:, int(self.w_obj_.pixel_h_ / 2):] = im_left[:, ::-1]
 
         ax.imshow(im, cmap=cmap)
         plt.setp(ax.get_xticklabels(), visible=False)

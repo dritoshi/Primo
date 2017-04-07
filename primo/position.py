@@ -161,8 +161,10 @@ class Position(object):
                                 index=self.r_obj_.cells_,
                                 columns=self.w_obj_.wish_matrix_.columns)
 
+        position = position.fillna(0)
+
         position_images = [np.array(position.ix[i]).reshape(
-            self.w_obj_.pixel_, self.w_obj_.pixel_)
+            self.w_obj_.pixel_v_, self.w_obj_.pixel_h_)
                                 for i in range(position.shape[0])]
 
         return (position, position_images)
@@ -183,7 +185,7 @@ class Position(object):
         """
         mean_position = position.mean()
         mean_position_image = mean_position.reshape(
-            self.w_obj_.pixel_, self.w_obj_.pixel_)
+            self.w_obj_.pixel_v_, self.w_obj_.pixel_h_)
 
         return (mean_position, mean_position_image)
 

@@ -106,13 +106,15 @@ class Wish(object):
 
         return self
 
-    def filter_images(self, pixel):
+    def filter_images(self, pixel_v, pixel_h, shape="round"):
         """filter images
 
         Parameters
         ----------
-        pixel : int
-            Target pixel size for resizing.
+        pixel_v : int
+            Target pixel for resizing. Vertical.
+        pixel_h : int
+            Target pixel for resizing. Horizontal.
 
         Return
         ------
@@ -120,23 +122,30 @@ class Wish(object):
             Returns the instance itself.
 
         """
-        self.pixel_ = pixel
+        self.pixel_ = np.int(np.sqrt(pixel_v * pixel_h))
+        self.pixel_v_ = pixel_v
+        self.pixel_h_ = pixel_h
 
-        self.wish_images_filtered_ = [processing_image(im, self.pixel_)
+        self.wish_images_filtered_ = [processing_image(im, pixel_v, pixel_h, shape)
                                       for im in self.wish_images_]
 
         w_list = [x.flatten() for x in self.wish_images_filtered_]
         w_index = self.genes_
-        w_column = ['pix' + str(i) for i in range(1, self.pixel_ ** 2 + 1)]
+        w_column = ['pix' + str(i) for i in range(1, pixel_v * pixel_h + 1)]
         self.wish_matrix_ = pd.DataFrame(w_list,
                                          index=w_index, columns=w_column)
 
-        disk_matrix = disk((self.pixel_ - 1) * 0.5)
-        self.pixel_name_all_ = np.array(w_column)
-        self.pixel_name_embryo_ = np.array(w_column)[
-            disk_matrix.flatten() == 1]
-        self.pixel_name_outer_ = np.array(w_column)[
-            disk_matrix.flatten() == 0]
+        if shape == "round":
+            disk_matrix = disk((self.pixel_ - 1) * 0.5)
+            self.pixel_name_all_ = np.array(w_column)
+            self.pixel_name_embryo_ = np.array(w_column)[
+                disk_matrix.flatten() == 1]
+            self.pixel_name_outer_ = np.array(w_column)[
+                disk_matrix.flatten() == 0]
+        else:
+            self.pixel_name_all_ = np.array(w_column)
+            self.pixel_name_embryo_ = np.array(w_column)
+            self.pixel_name_outer_ = np.array([])
 
         return self
 
@@ -195,30 +204,36 @@ class Wish(object):
         plt.tight_layout()
 
 
-def processing_image(image, pixel):
+def processing_image(image, pixel_v, pixel_h, shape="round"):
     """Preprocessing image
 
     Parameters
     ----------
     image : ndarray
         Binary input image.
-    pixel : int
-        Target pixel for resizing.
+    pixel_v : int
+        Target pixel for resizing. Vertical.
+    pixel_h : int
+        Target pixel for resizing. Horizontal.
 
     Return
     ------
-    image_out : ndarray, shape (pixel, pixel)
+    image_out : ndarray, shape (pixel_v, pixel_h)
         Output image.
 
     """
+
+    pixel = np.int(np.sqrt(pixel_v * pixel_h))
+
     im = image
-    im = imresize(im, (pixel, pixel), interp='bilinear')
+    im = imresize(im, (pixel_v, pixel_h), interp='bilinear')
     im = (rgb2gray(im) < 0.5)
     im = remove_small_objects(im, pixel / 6.)
     im = (binary_erosion(im, disk(pixel / 16.)) * 0.25 +
           im * 0.5 +
           binary_dilation(im, disk(pixel / 16.)) * 0.25)
-    im = im * disk((pixel - 1) * 0.5)
+    if shape == "round":
+        im = im * disk((pixel - 1) * 0.5)
     image_out = im
 
     return image_out
