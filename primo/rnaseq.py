@@ -246,8 +246,9 @@ class RNAseq(object):
 
         entr = [entropy(self.df_rnaseq_.iloc[:, i].values)
                 for i in range(self.df_rnaseq_.shape[1])]
-        sns.distplot(entr, ax=axes[2])
-        axes[2].set_title("Entropy", fontsize=16)
+        if not np.isinf(min(entr)):
+            sns.distplot(entr, ax=axes[2])
+            axes[2].set_title("Entropy", fontsize=16)
 
         if self.spike_type_:
             num_detected_transcript_spike = self.df_spike_.sum().values
@@ -263,8 +264,9 @@ class RNAseq(object):
 
             entr_spike = [entropy(self.df_spike_.iloc[:, i].values)
                           for i in range(self.df_spike_.shape[1])]
-            sns.distplot(entr_spike, ax=axes[5])
-            axes[5].set_title("Entropy (spike)", fontsize=16)
+            if not np.isinf(min(entr_spike)):
+                sns.distplot(entr_spike, ax=axes[5])
+                axes[5].set_title("Entropy (spike)", fontsize=16)
 
         fig.tight_layout()
 
