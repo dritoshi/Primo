@@ -223,7 +223,7 @@ class RNAseq(object):
 
         return self
 
-    def overview(self):
+    def overview(self, output_dir, figname=None):
         """Overview RNAseq data
         """
 
@@ -269,6 +269,13 @@ class RNAseq(object):
                 axes[5].set_title("Entropy (spike)", fontsize=16)
 
         fig.tight_layout()
+
+        if not figname:
+            figname = "hist_genes_transcripts.pdf"
+
+        output_file = os.path.join(output_dir, figname)
+
+        plt.savefig(output_file)
 
         return self
 
@@ -540,6 +547,7 @@ class RNAseq(object):
             os.mkdir(output_dir)
 
         output_file = os.path.join(output_dir, "mean_cv_plot.png")
+        output_file_pdf = os.path.join(output_dir, "mean_cv_plot.pdf")
 
         if colorize_variable_genes is True:
             ind = self.df_rnaseq_.index.isin(self.df_rnaseq_variable_.index)
@@ -568,6 +576,7 @@ class RNAseq(object):
         ax.legend(loc="upper right")
         plt.tight_layout()
         plt.savefig(output_file)
+        plt.savefig(output_file_pdf)
 
         return self
 
@@ -706,8 +715,12 @@ class RNAseq(object):
                 axes[1].set_yticks([])
 
             plt.tight_layout()
+
             output_file = os.path.join(output_dir, "tSNE.png")
+            output_file_pdf = os.path.join(output_dir, "tSNE.pdf")
+
             plt.savefig(output_file)
+            plt.savefig(output_file_pdf)
 
         return self
 
@@ -759,7 +772,10 @@ class RNAseq(object):
         plt.tight_layout()
 
         output_file = os.path.join(output_dir, "tSNE_PCscore.png")
+        output_file_pdf = os.path.join(output_dir, "tSNE_PCscore.pdf")
+
         plt.savefig(output_file)
+        plt.savefig(output_file_pdf)
 
         return self
 
@@ -818,7 +834,10 @@ class RNAseq(object):
         plt.tight_layout()
 
         output_file = os.path.join(output_dir, "Pairplot_PCA.png")
+        output_file_pdf = os.path.join(output_dir, "Pairplot_PCA.pdf")
+
         plt.savefig(output_file)
+        plt.savefig(output_file_pdf)
 
         return self
 
@@ -999,7 +1018,7 @@ class RNAseq(object):
                         str(val_lim) + ")")
             output_file = os.path.join(output_dir,
                                        space + "_" + pc_name +
-                                       "-correlated_positively.png")
+                                       "-correlated_positively.pdf")
             self.colorize_genes(gene_list, output_file, space, channel_list,
                                 coloring, plot_colorbar, suptitle)
 
@@ -1009,7 +1028,7 @@ class RNAseq(object):
                         str(val_lim) + ")")
             output_file = os.path.join(output_dir,
                                        space + "_" + pc_name +
-                                       "-correlated_negatively.png")
+                                       "-correlated_negatively.pdf")
             self.colorize_genes(gene_list, output_file, space, channel_list,
                                 coloring, plot_colorbar, suptitle)
 
@@ -1115,8 +1134,11 @@ class RNAseq(object):
                 fig.delaxes(axes[i])
 
         plt.tight_layout()
+
         output_file = os.path.join(output_dir, "tSNE_FACSchannel.png")
+        output_file_pdf = os.path.join(output_dir, "tSNE_FACSchannel.pdf")
         plt.savefig(output_file)
+        plt.savefig(output_file_pdf)
 
         return self
 
@@ -1181,6 +1203,7 @@ class RNAseq(object):
             raise ValueError("Option 'label' must be 'sample' or 'cluster'.")
 
         output_file = os.path.join(output_dir, "tSNE_" + label + ".png")
+        output_file_pdf = os.path.join(output_dir, "tSNE_" + label + ".pdf")
 
         series_label = pd.Series(list_label)
         factor_label = list(set(list_label))
@@ -1228,10 +1251,11 @@ class RNAseq(object):
             ax.scatter(X, Y, c=c, s=5,
                        edgecolors='None', label=legend_name)
 
-        plt.legend(markerscale=3.0, bbox_to_anchor=(1.05, 1),
-                   loc=2, borderaxespad=0., title=label)
+        lgd = plt.legend(markerscale=3.0, bbox_to_anchor=(1.05, 1),
+                         loc=2, borderaxespad=0., title=label)
 
-        plt.savefig(output_file)
+        plt.savefig(output_file, bbox_extra_artists=(lgd,), bbox_inches='tight')
+        plt.savefig(output_file_pdf, bbox_extra_artists=(lgd,), bbox_inches='tight')
 
         if label == "sample":
             self.used_color_sample_ = used_color
@@ -1240,7 +1264,7 @@ class RNAseq(object):
 
         return self
 
-    def violinplot(self, output_dir, gene_list=[], count="normalized",
+    def violinplot(self, output_dir, figname=None, gene_list=[], count="normalized",
                    label="sample", remove_label=[]):
         """Violinplots for genes
 
@@ -1281,7 +1305,6 @@ class RNAseq(object):
             raise ValueError("Option 'label' must be 'sample' or 'cluster'.")
 
         df[label] = list_label
-        output_file = os.path.join(output_dir, "violinplot_" + label + ".png")
 
         factor_label = list(set(list_label) - set(remove_label))
 
@@ -1328,6 +1351,9 @@ class RNAseq(object):
                 else:
                     axes[i].set_ylabel("Number")
 
+            output_file = os.path.join(output_dir, "violinplot_qc.png")
+            output_file_pdf = os.path.join(output_dir, "violinplot_qc.pdf")
+
         else:
             ncol = 4
             nrow = np.int(np.ceil(len(gene_list) * 1.0 / ncol))
@@ -1349,8 +1375,21 @@ class RNAseq(object):
                 if i >= ncol:
                     fig.delaxes(axes[i])
 
+            if not figname:
+                output_file = os.path.join(output_dir,
+                                           "violinplot_" + label + "_" + count + ".png")
+                output_file_pdf = os.path.join(output_dir,
+                                               "violinplot_" + label + "_" + count + ".pdf")
+            else:
+                output_file = os.path.join(output_dir, figname)
+                output_file_pdf = os.path.join(output_dir, figname)
+
         plt.tight_layout()
+
         plt.savefig(output_file)
+
+        if output_file != output_file_pdf:
+            plt.savefig(output_file_pdf)
 
         return self
 
