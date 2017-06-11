@@ -1364,26 +1364,23 @@ class RNAseq(object):
             axes = axes.flatten()
 
             for i, gene in enumerate(gene_list):
-
-# editing
-#             if gene not in self.df_rnaseq_.index:
-#                 axes[i].text(0.5, 0.5, "N.D.",
-#                              horizontalalignment="center",
-#                              verticalalignment="center",
-#                              fontsize=24)
-#                 axes[i].set_xlabel("", fontsize=14)
-#                 axes[i].set_ylabel("", fontsize=14)
-#                 axes[i].set_xticks([])
-#                 axes[i].set_yticks([])
-#             else:
-# editing
-
-                sns.violinplot(x=label, y=gene, data=df, scale="width",
-                               linewidth=1, palette=palette, ax=axes[i])
-                axes[i].set_ylim(0,)
-                axes[i].set_title(gene, fontsize="24")
-                axes[i].set_xlabel(label_name)
-                axes[i].set_ylabel("Count")
+                if gene not in self.df_rnaseq_.index:
+                    axes[i].text(0.5, 0.5, "N.D.",
+                                 horizontalalignment="center",
+                                 verticalalignment="center",
+                                 fontsize=24)
+                    axes[i].set_title(gene, fontsize="24")
+                    axes[i].set_xlabel("", fontsize=14)
+                    axes[i].set_ylabel("", fontsize=14)
+                    axes[i].set_xticks([])
+                    axes[i].set_yticks([])
+                else:
+                    sns.violinplot(x=label, y=gene, data=df, scale="width",
+                                   linewidth=1, palette=palette, ax=axes[i])
+                    axes[i].set_ylim(0,)
+                    axes[i].set_title(gene, fontsize="24")
+                    axes[i].set_xlabel(label_name)
+                    axes[i].set_ylabel("Count")
 
             for i in range(len(gene_list), len(axes)):
                 if i >= ncol:
