@@ -1405,7 +1405,7 @@ class RNAseq(object):
         return self
 
     def calc_markers(self, psuedo_count=1, mean_diff=2.0, fdr=0.05,
-                     num_core=16, random_state=12345):
+                     num_core=16, random_state=12345, num_cell=100):
         """Calculate marker genes for clusters
 
         Parameters
@@ -1432,7 +1432,7 @@ class RNAseq(object):
                 if i < j:
                     res_df = self._compare_two_clusters(
                         cluster_i, cluster_j, psuedo_count, mean_diff,
-                        fdr, num_core, random_state)
+                        fdr, num_core, random_state, num_cell)
                     dict_deg[(cluster_i, cluster_j)] = res_df
                     marker_genes.extend(list(res_df.index))
 
@@ -1445,7 +1445,7 @@ class RNAseq(object):
         return self
 
     def _compare_two_clusters(self, cluster_1, cluster_2, psuedo_count,
-                              mean_diff, fdr, num_core, random_state):
+                              mean_diff, fdr, num_core, random_state, num_cell):
 
         df = self.df_rnaseq_not_norm_
         df_1 = df.ix[:, self.cells_in_cluster_[cluster_1]]
@@ -1463,16 +1463,19 @@ class RNAseq(object):
             res_df = pd.DataFrame()
             return res_df
 
-        def select_100cells(df, random_state):
-            if df.shape[1] > 100:
-                random_state = np.random.RandomState(random_state)
-                cell = random_state.choice(range(df.shape[1]),
-                                           size=100, replace=False)
-                df = df.ix[:, cell]
-            return df
+        def select_limited_cells(df, random_state, num_cell):
+            if (num_cell == -1) or (df.shape[1] <= num_cell):
+                return df
+            else:
+                if df.shape[1] > num_cell:
+                    random_state = np.random.RandomState(random_state)
+                    cell = random_state.choice(range(df.shape[1]),
+                                               size=num_cell, replace=False)
+                    df = df.ix[:, cell]
+                return df
 
-        df_1 = select_100cells(df_1, random_state)
-        df_2 = select_100cells(df_2, random_state)
+        df_1 = select_limited_cells(df_1, random_state, num_cell)
+        df_2 = select_limited_cells(df_2, random_state, num_cell)
 
         def worker(genes, out_q):
             df_delta = pd.DataFrame()
