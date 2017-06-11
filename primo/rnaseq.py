@@ -1364,6 +1364,20 @@ class RNAseq(object):
             axes = axes.flatten()
 
             for i, gene in enumerate(gene_list):
+
+# editing
+#             if gene not in self.df_rnaseq_.index:
+#                 axes[i].text(0.5, 0.5, "N.D.",
+#                              horizontalalignment="center",
+#                              verticalalignment="center",
+#                              fontsize=24)
+#                 axes[i].set_xlabel("", fontsize=14)
+#                 axes[i].set_ylabel("", fontsize=14)
+#                 axes[i].set_xticks([])
+#                 axes[i].set_yticks([])
+#             else:
+# editing
+
                 sns.violinplot(x=label, y=gene, data=df, scale="width",
                                linewidth=1, palette=palette, ax=axes[i])
                 axes[i].set_ylim(0,)
@@ -1436,13 +1450,10 @@ class RNAseq(object):
     def _compare_two_clusters(self, cluster_1, cluster_2, psuedo_count,
                               mean_diff, fdr, num_core, random_state):
 
-        series_label = pd.Series(self.cluster_label_)
-        bool_cell_1 = list(series_label == cluster_1)
-        bool_cell_2 = list(series_label == cluster_2)
-
         df = self.df_rnaseq_not_norm_
-        df_1 = df.iloc[:, bool_cell_1]
-        df_2 = df.iloc[:, bool_cell_2]
+        df_1 = df.ix[:, self.cells_in_cluster_[cluster_1]]
+        df_2 = df.ix[:, self.cells_in_cluster_[cluster_2]]
+
         use_gene_1 = df.index[
             (df_1.mean(axis=1) / (psuedo_count + df_2.mean(axis=1)) >
              mean_diff)]
@@ -1493,8 +1504,8 @@ class RNAseq(object):
         [job.join() for job in jobs]
 
         res_df = res_df.loc[use_gene, :]
-        mean_df_1 = self.df_rnaseq_.ix[use_gene, bool_cell_1].mean(axis=1)
-        mean_df_2 = self.df_rnaseq_.ix[use_gene, bool_cell_2].mean(axis=1)
+        mean_df_1 = self.df_rnaseq_.ix[use_gene, self.cells_in_cluster_[cluster_1]].mean(axis=1)
+        mean_df_2 = self.df_rnaseq_.ix[use_gene, self.cells_in_cluster_[cluster_2]].mean(axis=1)
         res_df['mean_cluster' + str(cluster_1)] = mean_df_1
         res_df['mean_cluster' + str(cluster_2)] = mean_df_2
         res_df['FC'] = mean_df_1 / mean_df_2
