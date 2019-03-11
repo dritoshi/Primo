@@ -1069,7 +1069,7 @@ class RNAseq(object):
         channel_list : list
             List of channels to be shown
         coloring : str
-            The way of coloring. "raw" or "log".
+            The way of coloring. "raw" or "log" or "log10".
 
         plot_colorbar : bool
             Plot or not plot colorbar for normalized gene expression
@@ -1109,12 +1109,21 @@ class RNAseq(object):
                              verticalalignment="center",
                              fontsize=24)
             else:
-                if coloring == "raw":
-                    color = self.df_facs_.ix[:, channel]
-                elif coloring == "log":
-                    color = np.log(self.df_facs_.ix[:, channel]+0.01),
+
+                if min(self.df_facs_.ix[:, channel]) < 0:
+                    plot_val = self.df_facs_.ix[:, channel] +(-min(self.df_facs_.ix[:, channel]))
+                    print("This FACS-data << " + channel + " >> contains a negative value.")
                 else:
-                    print("Parameter 'coloring' must be 'raw' or 'log'.")
+                    plot_val = self.df_facs_.ix[:, channel]
+                
+                if coloring == "raw":
+                    color = plot_val
+                elif coloring == "log":
+                    color = np.log(np.float64(plot_val)+0.01),
+                elif coloring == "log10":
+                    color = np.log10(np.float64(plot_val)+1),
+                else:
+                    print("Parameter 'coloring' must be 'raw' or 'log' or 'log10'.")
 
                 S = axes[i].scatter(X, Y, c=color,
                                     cmap=plt.cm.jet,
@@ -1403,6 +1412,120 @@ class RNAseq(object):
             plt.savefig(output_file_pdf)
 
         return self
+
+    def violinplot_FACS(self, output_dir, figname=None, channel_list=[], count="raw",
+                   label="sample", remove_label=[]):
+        """Violinplots for FACS index
+        Parameters
+        ----------
+        output_dir : str
+            Output directory
+        channel_list : list
+            List of channels
+        label : str
+            Label used for coloring. "sample" or "cluster" can be selected.
+        remove_label : list
+            list of labels to be removed for plots.
+        Returns
+        -------
+        self : object
+            Returns the instance itself.
+        """
+
+        df_facsvio = pd.DataFrame()
+        df_facsvio = self.df_facs_.copy()
+        df_facsvio[channel_list] = df_facsvio[channel_list].astype(np.float64)
+                
+        for i, channel in enumerate(channel_list):
+            if channel in df_facsvio.columns:
+                if min(df_facsvio.ix[:, channel]) < 0:
+                    df_facsvio.ix[:, channel] = df_facsvio.ix[:, channel] +(-min(df_facsvio.ix[:, channel]))
+                    print("This FACS-data << " + channel + " >> contains a negative value.")
+        
+
+        if count == "log10":
+            df_facsvio[channel_list] = np.log10(df_facsvio[channel_list] +1)
+        elif count == "log":
+            df_facsvio[channel_list] = np.log(df_facsvio[channel_list] +0.01)
+        elif count == "raw":
+            df_facsvio[channel_list] = df_facsvio[channel_list]
+        else:
+            raise ValueError("Option 'count' must be 'raw' or 'log' or 'log10'.")
+
+        if label == "sample":
+            label_name = "Sample name"
+            list_label = [x.split("_label:")[1] for x
+                          in df_facsvio.index]
+            color_dict = self.used_color_sample_
+        elif label == "cluster":
+            label_name = "Cluster name"
+            list_label = self.cluster_label_
+            color_dict = self.used_color_cluster_
+        else:
+            raise ValueError("Option 'label' must be 'sample' or 'cluster'.")
+
+        df_facsvio[label] = list_label
+
+        factor_label = list(set(list_label) - set(remove_label))
+
+        factor_label.sort()
+
+        df_facsvio = df_facsvio[df_facsvio[label].isin(factor_label)]
+
+        palette = [color_dict[l] for l in factor_label]
+
+        ncol = 4
+        nrow = np.int(np.ceil(len(channel_list) * 1.0 / ncol))
+        figh = nrow * 4
+        figw = ncol * 4 + len(factor_label) * 0.5
+
+        fig, axes = plt.subplots(nrow, ncol, figsize=(figw, figh))
+        axes = axes.flatten()
+
+        for i, channel in enumerate(channel_list):
+            if channel not in df_facsvio.T.index:
+                axes[i].text(0.5, 0.5, "N.D.",
+                             horizontalalignment="center",
+                             verticalalignment="center",
+                             fontsize=24)
+                axes[i].set_title(channel, fontsize="24")
+                axes[i].set_xlabel("", fontsize=14)
+                axes[i].set_ylabel("", fontsize=14)
+                axes[i].set_xticks([])
+                axes[i].set_yticks([])
+            else:
+                sns.violinplot(x=label, y=channel, data=df_facsvio, scale="width", linewidth=1, palette=palette, ax=axes[i])
+                axes[i].set_ylim(0,)
+                axes[i].set_title(channel, fontsize="24")
+                axes[i].set_xlabel(label_name)
+                axes[i].set_ylabel("Value")
+
+        self.df_facs_violin = df_facsvio
+        
+        for i in range(len(channel_list), len(axes)):
+            if i >= ncol:
+                fig.delaxes(axes[i])
+
+        if not figname:
+            output_file = os.path.join(output_dir,
+                                       "violinplot_" + label + "_" + count + ".png")
+            output_file_pdf = os.path.join(output_dir,
+                                           "violinplot_" + label + "_" + count + ".pdf")
+        else:
+            output_file = os.path.join(output_dir, figname)
+            output_file_pdf = os.path.join(output_dir, figname)
+
+
+        plt.tight_layout()
+
+        plt.savefig(output_file)
+
+        if output_file != output_file_pdf:
+            plt.savefig(output_file_pdf)
+
+        return self
+
+
 
     def calc_markers(self, psuedo_count=1, mean_diff=2.0, fdr=0.05,
                      num_core=16, random_state=12345, num_cell=100):
